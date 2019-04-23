@@ -1,13 +1,12 @@
 package command
 
 import (
+	"crypto/rsa"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
 	"github.com/dawu415/PCFToolkit/certtool/command/x509Lib"
-	"github.com/oleiade/reflections"
 
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey"
@@ -23,6 +22,7 @@ type Verify struct {
 	x509VerifyLib *x509Lib.X509Lib
 }
 
+// NewVerifyCommand creates a new verify command with a given certificate respository, system domain and app domain
 func NewVerifyCommand(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string) *Verify {
 	return &Verify{
 		certRepo:      certRepo,
@@ -32,10 +32,12 @@ func NewVerifyCommand(certRepo *certificateRepository.CertificateRepository, sys
 	}
 }
 
+// Name describes the name of this command
 func (cmd *Verify) Name() string {
 	return "Verify"
 }
 
+// Execute performs the command
 func (cmd *Verify) Execute() []Result {
 
 	var results []Result
@@ -58,6 +60,10 @@ func (cmd *Verify) Execute() []Result {
 	return results
 }
 
+// stepCheckCertificateTrustChain determines if a server certificate has a trust chain with
+// provided intermediate and root certificates.
+// If ignoreCertRepoRootCA is true, the command ensures that the Certificate trust chain is determined from
+// the system trust store instead of provided root certificates.
 func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certificate, ignoreCertRepoRootCA bool) Result {
 
 	rootCertMessage := "using System Root Certificates."
@@ -89,6 +95,8 @@ func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certifi
 	}
 }
 
+// stepCheckCertificateDomainsForPCF checks to see if the required PCF DNS names exists in a
+// server certificate
 func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Certificate) Result {
 
 	DNSNames := []string{
@@ -130,6 +138,7 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 	}
 }
 
+// stepCheckCertificateExpiry checks the expiry of a certificate with in a 6 month period.
 func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate) Result {
 
 	stepResult := StepResult{
@@ -161,8 +170,10 @@ func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate
 	}
 }
 
+// stepCheckCertificateWithProvidedPrivateKey determines if a server certificate and its corresponding
+// provided private key match.
 func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certificate.Certificate, privateKeys map[string]privatekey.PrivateKey) Result {
-	// If the modulus of the private key is equal the server cert's modulus, then it matches
+	// If the modulus of the private key is equal the server cert's modulus, it matches
 	var err error
 	stepResult := StepResult{
 		Source: cmd.Name() + "- Verify Certificate And Private Key",
@@ -170,19 +181,22 @@ func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certifi
 
 	if key, ok := privateKeys[serverCert.Label]; ok {
 		stepResult.Message = fmt.Sprintf("Verifying matching certificate and key:\t%s with %s\n", serverCert.Label, key.Label)
-		var serverCertModulus interface{}
-		var privateKeyModulus interface{}
 
-		if serverCertModulus, err = reflections.GetField(serverCert.Certificate.PublicKey, "N"); err == nil {
-			if privateKeyModulus, err = reflections.GetField(key.PrivateKey, "N"); err == nil {
-				if reflect.DeepEqual(serverCertModulus, privateKeyModulus) {
+		if pubKey, ok := serverCert.Certificate.PublicKey.(rsa.PublicKey); ok {
+			if privateKey, ok := key.PrivateKey.(rsa.PrivateKey); ok {
+				if pubKey.N == privateKey.N {
 					stepResult.Status = StatusSuccess
 					stepResult.StatusMessage = "OK!"
 				} else {
 					stepResult.Status = StatusFailed
 					stepResult.StatusMessage = "FAILED!"
 				}
+			} else {
+				err = fmt.Errorf("Something is wrong with the private Key. Unable to assert the private key into an RSA PrivateKey Type")
 			}
+		} else {
+			err = fmt.Errorf("Something is wrong with the public Key. Unable to assert the public key into an RSA PublicKey Type")
+
 		}
 
 	} else {
