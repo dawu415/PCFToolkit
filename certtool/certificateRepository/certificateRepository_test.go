@@ -1,11 +1,11 @@
 package certificateRepository_test
 
 import (
-	"github.com/dawu415/PCFSToolkit/certificateRepository"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/certificate"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/certificate/mocks"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/fileIO/mocks"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/privatekey/mocks"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate/mocks"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/fileIO/mocks"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey/mocks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

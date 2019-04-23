@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dawu415/PCFSToolkit/command/x509Lib"
+	"github.com/dawu415/PCFToolkit/certtool/command/x509Lib"
 	"github.com/oleiade/reflections"
 
-	"github.com/dawu415/PCFSToolkit/certificateRepository/certificate"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/privatekey"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey"
 
-	"github.com/dawu415/PCFSToolkit/certificateRepository"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository"
 )
 
 // Verify defines the struct holding the data necessary to execute a command

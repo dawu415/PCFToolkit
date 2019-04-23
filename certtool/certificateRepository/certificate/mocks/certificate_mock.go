@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"fmt"
 
-	"github.com/dawu415/PCFSToolkit/certificateRepository/certificate"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 )
 
 // CertificateMock describes a mock for Certificate

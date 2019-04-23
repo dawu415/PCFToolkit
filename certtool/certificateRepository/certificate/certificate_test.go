@@ -1,9 +1,9 @@
 package certificate_test
 
 import (
-	"github.com/dawu415/PCFSToolkit/certificateRepository/certificate"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/pemDecoder/mocks"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/x509Parser/mocks"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/pemDecoder/mocks"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/x509Parser/mocks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

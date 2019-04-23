@@ -1,9 +1,9 @@
 package certificateRepository
 
 import (
-	"github.com/dawu415/PCFSToolkit/certificateRepository/certificate"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/fileIO"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/privatekey"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/fileIO"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey"
 )
 
 // CertificateRepository defines a way to hold certificates and enable operations to be performed

@@ -3,7 +3,7 @@ package x509Lib
 import (
 	"crypto/x509"
 
-	"github.com/dawu415/PCFSToolkit/certificateRepository/certificate"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 )
 
 type X509Lib struct {

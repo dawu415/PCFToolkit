@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dawu415/PCFSToolkit/certToolArgs"
-	"github.com/dawu415/PCFSToolkit/certificateRepository"
-	"github.com/dawu415/PCFSToolkit/command"
+	"github.com/dawu415/PCFToolkit/certtool/certToolArgs"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository"
+	"github.com/dawu415/PCFToolkit/certtool/command"
 )
 
 func main() {

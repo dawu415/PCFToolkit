@@ -5,7 +5,7 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 
-	"github.com/dawu415/PCFSToolkit/certificateRepository/certificate"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 )
 
 // X509ParseDataMock holds the data for the x509ParserMock

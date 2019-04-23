@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/pemDecoder"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/x509Parser"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/pemDecoder"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/x509Parser"
 )
 
 // Constants/Enums used to define a certificate type

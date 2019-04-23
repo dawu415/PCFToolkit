@@ -1,7 +1,7 @@
 package certToolArgs_test
 
 import (
-	. "github.com/dawu415/PCFSToolkit/certToolArgs"
+	. "github.com/dawu415/PCFToolkit/certtool/certToolArgs"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -3,7 +3,7 @@ package privatekey_mock
 import (
 	"fmt"
 
-	"github.com/dawu415/PCFSToolkit/certificateRepository/privatekey"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey"
 )
 
 // PrivateKeyMock defines a struct holding information and the necessary interfaces relating to a private key

@@ -3,8 +3,8 @@ package privatekey
 import (
 	"fmt"
 
-	"github.com/dawu415/PCFSToolkit/certificateRepository/pemDecoder"
-	"github.com/dawu415/PCFSToolkit/certificateRepository/x509Parser"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/pemDecoder"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/x509Parser"
 )
 
 // PEMPrivateKeyLoaderInterface  defines an interface to Load a PEM Private Key
