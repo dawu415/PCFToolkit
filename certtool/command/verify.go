@@ -192,11 +192,10 @@ func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certifi
 					stepResult.StatusMessage = "FAILED!"
 				}
 			} else {
-				err = fmt.Errorf("Something is wrong with the private Key. Unable to assert the private key into an RSA PrivateKey Type")
+				err = fmt.Errorf("Something is wrong with the private Key. Unable to assert the private key into an RSA PrivateKey Type. Check the data format input (Should be DER Base64 bytes) or re-download the private key")
 			}
 		} else {
-			err = fmt.Errorf("Something is wrong with the public Key. Unable to assert the public key into an RSA PublicKey Type")
-
+			err = fmt.Errorf("Something is wrong with the public Key. Unable to assert the public key into an RSA PublicKey Type. Check the data format input (Should be ASN.1 Base64 bytes) or re-download the public key")
 		}
 
 	} else {

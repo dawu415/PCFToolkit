@@ -6,20 +6,22 @@ import (
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 )
 
+// X509Lib defines a thin wrapper to the crypto/x509 module
 type X509Lib struct {
 }
 
+// NewX509Lib generates a new X509Lib struct
 func NewX509Lib() *X509Lib {
 	return &X509Lib{}
 }
 
+// TrustChainExistOn determines if a trust chain exists for a given serverCert and its associated intermediate and rootCerts.
 func (x *X509Lib) TrustChainExistOn(serverCert certificate.Certificate, rootCerts, intermediateCerts []certificate.Certificate) bool {
 
 	trustChainExists := false
 	verifyOptions := x.createCertVerifyOptionsWith(rootCerts, intermediateCerts)
 
 	if _, certVerifyStatus := serverCert.Certificate.Verify(verifyOptions); certVerifyStatus != nil {
-		// Trust chain failure.
 		trustChainExists = false
 	} else {
 		trustChainExists = true
@@ -28,6 +30,8 @@ func (x *X509Lib) TrustChainExistOn(serverCert certificate.Certificate, rootCert
 	return trustChainExists
 }
 
+// convertCertRepoCertArrayToX509CertPool is a helper function that pushes an array of
+// Certificates into an crypto/x509 CertPool
 func (x *X509Lib) convertCertRepoCertArrayToX509CertPool(certArray []certificate.Certificate) *x509.CertPool {
 	certPool := x509.NewCertPool()
 	// Move the certs into a cert pool

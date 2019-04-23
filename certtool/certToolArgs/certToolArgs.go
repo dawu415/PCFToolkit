@@ -175,7 +175,7 @@ func NewCertToolArguments() *CertToolArguments {
 			},
 			/////////////////////////////////////////////////
 			"--apps-domain": &certToolFlagProperty{
-				description:   "Specifies the app domain on PCF, e.g., apps.company.com . Defaults to 'apps.'",
+				description:   "Specifies the app domain on PCF, e.g., apps.company.com . This should be the subdomain. Defaults to 'apps.'",
 				argumentCount: 1,
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, err *error) {
 					*err = nil
@@ -195,7 +195,7 @@ func NewCertToolArguments() *CertToolArguments {
 			},
 			/////////////////////////////////////////////////
 			"--sys-domain": &certToolFlagProperty{
-				description:   "Specifies the sys domain on PCF, e.g., sys.company.com . Defaults to 'sys.'",
+				description:   "Specifies the sys domain on PCF, e.g., sys.company.com . This should be the subdomain. Defaults to 'sys.'",
 				argumentCount: 1,
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, err *error) {
 					*err = nil
@@ -246,7 +246,7 @@ func (cta *CertToolArguments) GetUsage() string {
 	return sb.String()
 }
 
-// Process function is the entrypoint for processing Create-Service-Push Arguments
+// Process function is the entrypoint for processing certtool Arguments
 func (cta *CertToolArguments) Process(args []string) (*CertToolArguments, error) {
 
 	args = args[1:] // Remove the first executable name
