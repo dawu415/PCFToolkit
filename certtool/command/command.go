@@ -4,7 +4,7 @@ import "github.com/dawu415/PCFToolkit/certtool/certificateRepository"
 
 // Command describes the interface to start running a command
 type Command interface {
-	Execute() []Result
+	Execute() [][]Result
 	Name() string
 }
 

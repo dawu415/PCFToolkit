@@ -3,6 +3,7 @@ package certificate_mock
 import (
 	"crypto/x509"
 	"fmt"
+	"time"
 
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 )
@@ -11,6 +12,10 @@ import (
 type CertificateMock struct {
 	CertificateType          int
 	LoadPEMCertificateFailed bool
+	DNSNames                 []string
+	NotBefore                time.Time
+	NotAfter                 time.Time
+	PublicKey                interface{}
 }
 
 // NewPEMCertificateMock creates a mock interface for the PEMCertificate for testing
@@ -28,9 +33,15 @@ func (cert *CertificateMock) LoadPEMCertificates(label string, PEMCertBytes []by
 
 	return []certificate.Certificate{
 		certificate.Certificate{
-			Type:        cert.CertificateType,
-			Label:       label,
-			Certificate: &x509.Certificate{Raw: PEMCertBytes}, // Placeholder to hold the PEMCertBytes
+			Type:  cert.CertificateType,
+			Label: label,
+			Certificate: &x509.Certificate{
+				Raw:       PEMCertBytes,
+				DNSNames:  cert.DNSNames,
+				NotAfter:  cert.NotAfter,
+				NotBefore: cert.NotBefore,
+				PublicKey: cert.PublicKey,
+			}, // Placeholder to hold the PEMCertBytes
 		},
 	}, err
 }

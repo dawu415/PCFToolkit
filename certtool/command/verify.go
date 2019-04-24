@@ -19,7 +19,7 @@ type Verify struct {
 	certRepo      *certificateRepository.CertificateRepository
 	systemDomain  string
 	appsDomain    string
-	x509VerifyLib *x509Lib.X509Lib
+	x509VerifyLib x509Lib.Interface
 }
 
 // NewVerifyCommand creates a new verify command with a given certificate respository, system domain and app domain
@@ -32,30 +32,46 @@ func NewVerifyCommand(certRepo *certificateRepository.CertificateRepository, sys
 	}
 }
 
+// NewVerifyCommandCustomVerifyLib returns a verify command with given certificate repository, system domain, app domain and an x509VerifyLib
+func NewVerifyCommandCustomVerifyLib(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string, verifyLib x509Lib.Interface) *Verify {
+	return &Verify{
+		certRepo:      certRepo,
+		systemDomain:  systemDoman,
+		appsDomain:    appDomain,
+		x509VerifyLib: verifyLib,
+	}
+}
+
 // Name describes the name of this command
 func (cmd *Verify) Name() string {
 	return "Verify"
 }
 
 // Execute performs the command
-func (cmd *Verify) Execute() []Result {
+func (cmd *Verify) Execute() [][]Result {
 
-	var results []Result
+	var results [][]Result
 	useSystemRootCerts := true
-	for _, serverCert := range cmd.certRepo.ServerCerts {
+
+	serverCertCount := len(cmd.certRepo.ServerCerts)
+	if serverCertCount > 0 {
+		results = make([][]Result, serverCertCount)
+	}
+
+	for idx, serverCert := range cmd.certRepo.ServerCerts {
 		// Check if the user provided the root CA certs.
 		if len(cmd.certRepo.RootCACerts) == 0 {
 			// If not, we should use the system CA cert store.
-			results = append(results, cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts))
+			results[idx] = append(results[idx], cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts))
 		} else {
 			// Otherwise, test both the provided root CA certs and the system store.
-			results = append(results, cmd.stepCheckCertificateTrustChain(serverCert, !useSystemRootCerts))
-			results = append(results, cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts))
+			results[idx] = append(results[idx], cmd.stepCheckCertificateTrustChain(serverCert, !useSystemRootCerts))
+			results[idx] = append(results[idx], cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts))
 		}
 
-		results = append(results, cmd.stepCheckCertificateDomainsForPCF(serverCert))
-		results = append(results, cmd.stepCheckCertificateExpiry(serverCert))
-		results = append(results, cmd.stepCheckCertificateWithProvidedPrivateKey(serverCert, cmd.certRepo.PrivateKeys))
+		results[idx] = append(results[idx], cmd.stepCheckCertificateDomainsForPCF(serverCert))
+		results[idx] = append(results[idx], cmd.stepCheckCertificateExpiry(serverCert))
+		results[idx] = append(results[idx], cmd.stepCheckCertificateWithProvidedPrivateKey(serverCert, cmd.certRepo.PrivateKeys))
 	}
 	return results
 }
@@ -76,7 +92,6 @@ func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certifi
 	hasTrustedChain := cmd.x509VerifyLib.TrustChainExistOn(serverCert, rootCertificates, cmd.certRepo.IntermediateCerts)
 
 	verifyStepResult := StepResult{
-		Source:  cmd.Name() + "- Verify Certificate Trust",
 		Message: fmt.Sprintf("Verifying trust chain of %s", serverCert.Label),
 	}
 
@@ -89,6 +104,7 @@ func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certifi
 	}
 
 	return Result{
+		Source:      SourceVerifyTrustChain,
 		Title:       fmt.Sprintf("Verifying Certificate Trust Chain %s", rootCertMessage),
 		StepResults: []StepResult{verifyStepResult},
 		Error:       nil,
@@ -117,7 +133,6 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 		}
 
 		stepResult := StepResult{
-			Source:  cmd.Name() + "- Verify Certificate SANs",
 			Message: fmt.Sprintf("Checking %s", dnsName),
 		}
 
@@ -132,6 +147,7 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 
 	}
 	return Result{
+		Source:      SourceVerifyCertSANS,
 		Title:       "Checking PCF SANs on Certificate",
 		StepResults: resultsArray,
 		Error:       nil,
@@ -142,7 +158,6 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate) Result {
 
 	stepResult := StepResult{
-		Source:  cmd.Name() + "- Verify Certificate Expiry",
 		Message: fmt.Sprintf("Verifying %s\nValid From:\t%s UNTIL %s\n", serverCert.Label, serverCert.Certificate.NotBefore.String(), serverCert.Certificate.NotAfter.String()),
 	}
 
@@ -159,11 +174,12 @@ func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate
 			stepResult.StatusMessage = fmt.Sprintf("WARNING - This certificate expires in %0.2f days (%0.2f months)\n", serverCert.Certificate.NotAfter.Sub(currentTime).Hours()/24, serverCert.Certificate.NotAfter.Sub(currentTime).Hours()/(24*365/12))
 		}
 	} else {
-		stepResult.Status = StatusSuccess
+		stepResult.Status = StatusFailed
 		stepResult.StatusMessage = "FAILED! Certificate Expired!"
 	}
 
 	return Result{
+		Source:      SourceVerifyCertExpiry,
 		Title:       "Checking Certificate Expiry",
 		StepResults: []StepResult{stepResult},
 		Error:       nil,
@@ -175,9 +191,7 @@ func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate
 func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certificate.Certificate, privateKeys map[string]privatekey.PrivateKey) Result {
 	// If the modulus of the private key is equal the server cert's modulus, it matches
 	var err error
-	stepResult := StepResult{
-		Source: cmd.Name() + "- Verify Certificate And Private Key",
-	}
+	stepResult := StepResult{}
 
 	if key, ok := privateKeys[serverCert.Label]; ok {
 		stepResult.Message = fmt.Sprintf("Verifying matching certificate and key:\t%s with %s\n", serverCert.Label, key.Label)
@@ -192,9 +206,13 @@ func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certifi
 					stepResult.StatusMessage = "FAILED!"
 				}
 			} else {
+				stepResult.Status = StatusFailed
+				stepResult.StatusMessage = "FAILED!"
 				err = fmt.Errorf("Something is wrong with the private Key. Unable to assert the private key into an RSA PrivateKey Type. Check the data format input (Should be DER Base64 bytes) or re-download the private key")
 			}
 		} else {
+			stepResult.Status = StatusFailed
+			stepResult.StatusMessage = "FAILED!"
 			err = fmt.Errorf("Something is wrong with the public Key. Unable to assert the public key into an RSA PublicKey Type. Check the data format input (Should be ASN.1 Base64 bytes) or re-download the public key")
 		}
 
@@ -205,6 +223,7 @@ func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certifi
 	}
 
 	return Result{
+		Source:      SourceVerifyCertPrivateKeyMatch,
 		Title:       "Checking the certificate and private key match",
 		StepResults: []StepResult{stepResult},
 		Error:       err,

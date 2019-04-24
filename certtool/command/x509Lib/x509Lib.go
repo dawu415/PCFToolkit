@@ -6,7 +6,12 @@ import (
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 )
 
-// X509Lib defines a thin wrapper to the crypto/x509 module
+// Interface defines a thin wrapper to the crypto/x509 module
+type Interface interface {
+	TrustChainExistOn(serverCert certificate.Certificate, rootCerts, intermediateCerts []certificate.Certificate) bool
+}
+
+// X509Lib defines the data associated with the x509Kib
 type X509Lib struct {
 }
 

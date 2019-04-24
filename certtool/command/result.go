@@ -11,16 +11,27 @@ const (
 	StatusNotChecked = iota
 )
 
+const (
+	// SourceVerifyTrustChain is a constant describing data sourced from the verify trust chain function
+	SourceVerifyTrustChain = iota
+	// SourceVerifyCertSANS is a constant describing data sourced from the verify cert SANS function
+	SourceVerifyCertSANS = iota
+	// SourceVerifyCertExpiry is a constant describing data sourced from the verify cert expiry function
+	SourceVerifyCertExpiry = iota
+	// SourceVerifyCertPrivateKeyMatch is a constant describing data sourced from the verify cert private key match function
+	SourceVerifyCertPrivateKeyMatch = iota
+)
+
 // Result holds the output results of a given command
 type Result struct {
 	Title       string
+	Source      int
 	StepResults []StepResult
 	Error       error
 }
 
 // StepResult holds the detailed output results that maybe in a command
 type StepResult struct {
-	Source        string
 	Message       string
 	Status        int
 	StatusMessage string

@@ -9,6 +9,7 @@ import (
 // PrivateKeyMock defines a struct holding information and the necessary interfaces relating to a private key
 type PrivateKeyMock struct {
 	LoadPEMPrivateKeyFailed bool
+	PrivateKey              interface{}
 }
 
 // NewPrivateKeyMock instantiates a new PrivateKey loader interface
@@ -24,9 +25,19 @@ func (key *PrivateKeyMock) LoadPEMPrivateKey(privateKeylabel, serverCertLabel st
 		err = fmt.Errorf("LoadPEMPrivateKeyFailed was set to TRUE")
 	}
 
-	return privatekey.PrivateKey{
-		Label:           privateKeylabel,
-		ServerCertLabel: serverCertLabel,
-		PrivateKey:      append(PEMKeyBytes, []byte(passphrase)...),
-	}, err
+	var privateKey privatekey.PrivateKey
+	if key.PrivateKey != nil {
+		privateKey = privatekey.PrivateKey{
+			Label:           privateKeylabel,
+			ServerCertLabel: serverCertLabel,
+			PrivateKey:      key.PrivateKey,
+		}
+	} else {
+		privateKey = privatekey.PrivateKey{
+			Label:           privateKeylabel,
+			ServerCertLabel: serverCertLabel,
+			PrivateKey:      append(PEMKeyBytes, []byte(passphrase)...),
+		}
+	}
+	return privateKey, err
 }
