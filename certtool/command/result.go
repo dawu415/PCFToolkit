@@ -22,6 +22,13 @@ const (
 	SourceVerifyCertPrivateKeyMatch = iota
 )
 
+const (
+	// SourceInfoCert is a constant describing data sourced from the info command to retrieve cert data
+	SourceInfoCert = iota
+	// SourceInfoCertChain is a constant describing data sourced from the info command to construct a cert chain
+	SourceInfoCertChain = iota
+)
+
 // Result holds the output results of a given command
 type Result struct {
 	Title       string

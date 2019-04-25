@@ -16,3 +16,10 @@ func CreateVerifyCommand(certRepo *certificateRepository.CertificateRepository, 
 		appsDomain:   appDomain,
 	}
 }
+
+// CreateInfoCommand creates an Info Command
+func CreateInfoCommand(certRepo *certificateRepository.CertificateRepository) Command {
+	return &Info{
+		certRepo: certRepo,
+	}
+}
