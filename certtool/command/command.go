@@ -10,11 +10,7 @@ type Command interface {
 
 // CreateVerifyCommand creates a Verify Command
 func CreateVerifyCommand(certRepo *certificateRepository.CertificateRepository, systemDomain, appDomain string) Command {
-	return &Verify{
-		certRepo:     certRepo,
-		systemDomain: systemDomain,
-		appsDomain:   appDomain,
-	}
+	return NewVerifyCommand(certRepo, systemDomain, appDomain)
 }
 
 // CreateInfoCommand creates an Info Command
