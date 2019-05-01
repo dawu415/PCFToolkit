@@ -18,10 +18,12 @@ func main() {
 	cta, err := c.Process(os.Args)
 
 	if err != nil {
-		fmt.Println("ERROR: ", err.Error())
+		if len(err.Error()) > 0 {
+			fmt.Println("ERROR: ", err.Error())
+		}
 		return
 	} else if cta == nil {
-		fmt.Println(c.GetUsage())
+		fmt.Println(c.GetUsage(""))
 		return
 	}
 
@@ -31,6 +33,7 @@ func main() {
 	for _, rootCertFilename := range cta.RootCAFiles {
 		if err := certRepo.InstallCertificates(rootCertFilename); err != nil {
 			fmt.Println("ERROR: ", err.Error())
+			return
 		}
 	}
 
@@ -38,6 +41,7 @@ func main() {
 	for _, intCertFilename := range cta.IntermediateCertFiles {
 		if err := certRepo.InstallCertificates(intCertFilename); err != nil {
 			fmt.Println("ERROR: ", err.Error())
+			return
 		}
 	}
 
@@ -49,6 +53,7 @@ func main() {
 				serverCertFileSet.ServerCertPrivateKeyFilename,
 				serverCertFileSet.ServerCertPrivateKeyPassphrase); err != nil {
 			fmt.Println("ERROR: ", err.Error())
+			return
 		}
 	}
 	// Create the appropriate comand and execute it.

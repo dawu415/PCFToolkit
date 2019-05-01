@@ -8,6 +8,13 @@ import (
 	"text/tabwriter"
 )
 
+// COMMANDS is the list of supported commands in this application
+var COMMANDS = map[string]string{
+	"verify":  "Performs a set of certificate tests to ensure it is suitable for use on PCF",
+	"info":    "Provides specific information on the certicate inputs",
+	"decrypt": "Decrypts a given private key with its corresponding passphrase",
+}
+
 // Interface describes the interface to process input commandline arguments
 type Interface interface {
 	Process(args []string) (*CertToolArguments, error)
@@ -16,9 +23,10 @@ type Interface interface {
 
 // CSPFlagProperty defines a flag in create-service-push, its properties and a handler to decode output to a CSPArgument struct
 type certToolFlagProperty struct {
-	description   string
-	argumentCount int
-	handler       func(int, []string, int, *CertToolArguments, *error) // func(index, argument list, argCount, outputArgument, error)
+	description        string
+	argumentCount      int
+	compatibleCommands []string
+	handler            func(int, []string, int, *CertToolArguments, []string, *error) // func(index, argument list, argCount, outputArgument,compatibleCommands, error)
 }
 
 // CertToolCertificateFileSet describes a server certificate having a corresponding private key filename and a passphrase, if it is encrypted.
@@ -31,8 +39,7 @@ type CertToolCertificateFileSet struct {
 // CertToolArguments holds the Processed input arguments
 type CertToolArguments struct {
 	programName           string
-	CommandName           string // Describes the Command that is to be run in the program.  Possible values:  verify, decrypt, info and serve
-	FindRootCA            bool
+	CommandName           string // Describes the Command that is to be run in the program.  Possible values:  verify, decrypt and info
 	RootCAFiles           []string
 	IntermediateCertFiles []string
 	ServerCertFiles       []CertToolCertificateFileSet
@@ -46,7 +53,6 @@ func NewCertToolArguments() *CertToolArguments {
 	return &CertToolArguments{
 		programName:           filepath.Base(os.Args[0]),
 		RootCAFiles:           []string{},
-		FindRootCA:            false,
 		IntermediateCertFiles: []string{},
 		ServerCertFiles:       []CertToolCertificateFileSet{},
 		SystemDomain:          "sys.",
@@ -55,193 +61,249 @@ func NewCertToolArguments() *CertToolArguments {
 		flags: map[string]*certToolFlagProperty{
 			/////////////////////////////////////////////////
 			"--server-cert": &certToolFlagProperty{
-				description:   "Takes in a server certificate filename and optionally, its private key filename and/or its passphrase. Separated by spaces. The format is --server-cert server.crt [server.key [passphrase]]",
-				argumentCount: 1,
-				handler: func(index int, args []string, argCount int, cta *CertToolArguments, err *error) {
+				description:        "Takes in a server certificate filename and optionally, its private key filename and/or its passphrase. Separated by spaces. The format is --server-cert server.crt [server.key [passphrase]]",
+				argumentCount:      1,
+				compatibleCommands: []string{"verify", "info"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
-					if (index + 1) < len(args) { // This condition covers the case if we don't have any arguments at the end of the arg list
-						// This flag has a variable number of arguments
-						// Count the number of arguments until it reaches a '-'
-						var idx = index
-						for idx = index + 1; idx < len(args); idx++ {
-							if strings.HasPrefix(args[idx], "-") {
-								break
-							}
-						}
 
-						// Calculate the number of arguments
-						argCount = idx - index - 1
-						// Update the argument count
-						cta.flags["--server-cert"].argumentCount = argCount
-
-						cert := CertToolCertificateFileSet{}
-
-						if argCount > 0 {
-							if argCount >= 1 {
-								cert.ServerCertFilename = args[index+1]
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						if (index + 1) < len(args) { // This condition covers the case if we don't have any arguments at the end of the arg list
+							// This flag has a variable number of arguments
+							// Count the number of arguments until it reaches a '-'
+							var idx = index
+							for idx = index + 1; idx < len(args); idx++ {
+								if strings.HasPrefix(args[idx], "-") {
+									break
+								}
 							}
 
-							if argCount >= 2 {
-								cert.ServerCertPrivateKeyFilename = args[index+2]
-							}
+							// Calculate the number of arguments
+							argCount = idx - index - 1
+							// Update the argument count
+							cta.flags["--server-cert"].argumentCount = argCount
 
-							if argCount >= 3 {
-								cert.ServerCertPrivateKeyPassphrase = args[index+3]
+							cert := CertToolCertificateFileSet{}
+
+							if argCount > 0 {
+								if argCount >= 1 {
+									cert.ServerCertFilename = args[index+1]
+								}
+
+								if argCount >= 2 {
+									cert.ServerCertPrivateKeyFilename = args[index+2]
+								}
+
+								if argCount >= 3 {
+									cert.ServerCertPrivateKeyPassphrase = args[index+3]
+								}
+								cta.ServerCertFiles = append(cta.ServerCertFiles, cert)
+							} else {
+								*err = fmt.Errorf("No arguments provided for --server-cert. Got %s instead", args[index+1])
 							}
-							cta.ServerCertFiles = append(cta.ServerCertFiles, cert)
 						} else {
-							*err = fmt.Errorf("No arguments provided for --server-cert. Got %s instead", args[index+1])
+							*err = fmt.Errorf("No arguments provided for --server-cert")
 						}
 					} else {
-						*err = fmt.Errorf("No arguments provided for --server-cert")
+						*err = fmt.Errorf("%s does not support --server-cert", cta.CommandName)
 					}
 				},
 			},
 			/////////////////////////////////////////////////
 			"--cert": &certToolFlagProperty{
-				description:   "Takes in a certificate filename containing one or more certificates. The format is --cert cert.pem",
-				argumentCount: 1,
-				handler: func(index int, args []string, argCount int, cta *CertToolArguments, err *error) {
+				description:        "Takes in a certificate filename containing one or more certificates. The format is --cert cert.pem",
+				argumentCount:      1,
+				compatibleCommands: []string{"verify", "info"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
-					if (index + argCount) < len(args) {
-						// For simplicity of code, lets not be generic and just assume the
-						// code here has the argument count of 1.
-						if !strings.HasPrefix(args[index+1], "-") {
-							cta.IntermediateCertFiles = append(cta.IntermediateCertFiles, args[index+1])
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						if (index + argCount) < len(args) {
+							// For simplicity of code, lets not be generic and just assume the
+							// code here has the argument count of 1.
+							if !strings.HasPrefix(args[index+1], "-") {
+								cta.IntermediateCertFiles = append(cta.IntermediateCertFiles, args[index+1])
+							} else {
+								*err = fmt.Errorf("No arguments provided for --cert. Got %s instead", args[index+1])
+							}
 						} else {
-							*err = fmt.Errorf("No arguments provided for --cert. Got %s instead", args[index+1])
+							*err = fmt.Errorf("No arguments provided for --cert")
 						}
 					} else {
-						*err = fmt.Errorf("No arguments provided for --cert")
+						*err = fmt.Errorf("%s does not support --cert", cta.CommandName)
 					}
 				},
 			},
 			/////////////////////////////////////////////////
-			"--find-root-ca": &certToolFlagProperty{
-				description:   "Flag with no arguments used to specify the need to output the root ca certificate. ",
-				argumentCount: 0,
-				handler: func(index int, args []string, argCount int, cta *CertToolArguments, err *error) {
-					*err = nil
-					cta.FindRootCA = true
-				},
-			},
-			/////////////////////////////////////////////////
 			"--root-ca": &certToolFlagProperty{
-				description:   "Takes in a root ca certificate.  If specified, this will be used as the trusted CA for the input certificate. Otherwise, the system trusted certs are used instead. Usage: --root-ca rootca.pem",
-				argumentCount: 1,
-				handler: func(index int, args []string, argCount int, cta *CertToolArguments, err *error) {
+				description:        "Takes in a root ca certificate.  If specified, this will be used as the trusted CA for the input certificate. Otherwise, the system trusted certs are used instead. Usage: --root-ca rootca.pem",
+				argumentCount:      1,
+				compatibleCommands: []string{"verify", "info"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
-					if (index + argCount) < len(args) {
-						// For simplicity of code, lets not be generic and just assume the
-						// code here has the argument count of 1.
-						if !strings.HasPrefix(args[index+1], "-") {
-							cta.RootCAFiles = append(cta.RootCAFiles, args[index+1])
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						if (index + argCount) < len(args) {
+							// For simplicity of code, lets not be generic and just assume the
+							// code here has the argument count of 1.
+							if !strings.HasPrefix(args[index+1], "-") {
+								cta.RootCAFiles = append(cta.RootCAFiles, args[index+1])
+							} else {
+								*err = fmt.Errorf("No arguments provided for --root-ca. Got %s instead", args[index+1])
+							}
 						} else {
-							*err = fmt.Errorf("No arguments provided for --root-ca. Got %s instead", args[index+1])
+							*err = fmt.Errorf("No arguments provided for --root-ca")
 						}
 					} else {
-						*err = fmt.Errorf("No arguments provided for --root-ca")
+						*err = fmt.Errorf("%s does not support --root-ca", cta.CommandName)
 					}
 				},
 			},
 			/////////////////////////////////////////////////
 			"--private-key": &certToolFlagProperty{
-				description:   "Takes in a private key file and potentially, its decryption passphrase.  --private-key server.key[,passphrase]",
-				argumentCount: 1,
-				handler: func(index int, args []string, argCount int, cta *CertToolArguments, err *error) {
+				description:        "Takes in a private key file and potentially, its decryption passphrase - if encrypted.  --private-key server.key[,passphrase]",
+				argumentCount:      1,
+				compatibleCommands: []string{"decrypt"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
-					if (index + argCount) < len(args) {
-						// For simplicity of code, lets not be generic and just assume the
-						// code here has the argument count of 1.
-						if !strings.HasPrefix(args[index+1], "-") {
-							input := strings.SplitN(args[index+1], ",", 2)
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						if (index + argCount) < len(args) {
+							// For simplicity of code, lets not be generic and just assume the
+							// code here has the argument count of 1.
+							if !strings.HasPrefix(args[index+1], "-") {
+								input := strings.SplitN(args[index+1], ",", 2)
 
-							cert := CertToolCertificateFileSet{}
-							if len(input) >= 1 {
-								cert.ServerCertPrivateKeyFilename = input[0]
-							}
+								cert := CertToolCertificateFileSet{}
+								if len(input) >= 1 {
+									cert.ServerCertPrivateKeyFilename = input[0]
+								}
 
-							if len(input) >= 2 {
-								cert.ServerCertPrivateKeyPassphrase = input[1]
+								if len(input) >= 2 {
+									cert.ServerCertPrivateKeyPassphrase = input[1]
+								}
+								cta.ServerCertFiles = append(cta.ServerCertFiles, cert)
+							} else {
+								*err = fmt.Errorf("No arguments provided for --private-key. Got %s instead", args[index+1])
 							}
-							cta.ServerCertFiles = append(cta.ServerCertFiles, cert)
 						} else {
-							*err = fmt.Errorf("No arguments provided for --private-key. Got %s instead", args[index+1])
+							*err = fmt.Errorf("No arguments provided for --private-key")
 						}
 					} else {
-						*err = fmt.Errorf("No arguments provided for --private-key")
+						*err = fmt.Errorf("%s does not support --private-key", cta.CommandName)
 					}
 				},
 			},
 			/////////////////////////////////////////////////
 			"--apps-domain": &certToolFlagProperty{
-				description:   "Specifies the app domain on PCF, e.g., apps.company.com . This should be the subdomain. Defaults to 'apps.'",
-				argumentCount: 1,
-				handler: func(index int, args []string, argCount int, cta *CertToolArguments, err *error) {
+				description:        "Specifies the app domain on PCF, e.g., apps.company.com . This should be the subdomain. Defaults to 'apps.'",
+				argumentCount:      1,
+				compatibleCommands: []string{"verify"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
-					if (index + argCount) < len(args) {
-						if !strings.HasPrefix(args[index+1], "-") {
-							cta.AppsDomain = args[index+1]
-							if !strings.HasSuffix(cta.AppsDomain, ".") {
-								cta.AppsDomain = cta.AppsDomain + "."
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						if (index + argCount) < len(args) {
+							if !strings.HasPrefix(args[index+1], "-") {
+								cta.AppsDomain = args[index+1]
+								if !strings.HasSuffix(cta.AppsDomain, ".") {
+									cta.AppsDomain = cta.AppsDomain + "."
+								}
+							} else {
+								*err = fmt.Errorf("No arguments provided for --apps-domain. Got %s instead", args[index+1])
 							}
 						} else {
-							*err = fmt.Errorf("No arguments provided for --apps-domain. Got %s instead", args[index+1])
+							*err = fmt.Errorf("No arguments provided for --apps-domain")
 						}
 					} else {
-						*err = fmt.Errorf("No arguments provided for --apps-domain")
+						*err = fmt.Errorf("%s does not support --apps-domain", cta.CommandName)
 					}
 				},
 			},
 			/////////////////////////////////////////////////
 			"--sys-domain": &certToolFlagProperty{
-				description:   "Specifies the sys domain on PCF, e.g., sys.company.com . This should be the subdomain. Defaults to 'sys.'",
-				argumentCount: 1,
-				handler: func(index int, args []string, argCount int, cta *CertToolArguments, err *error) {
+				description:        "Specifies the sys domain on PCF, e.g., sys.company.com . This should be the subdomain. Defaults to 'sys.'",
+				argumentCount:      1,
+				compatibleCommands: []string{"verify"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
-					if (index + argCount) < len(args) {
-						if !strings.HasPrefix(args[index+1], "-") {
-							cta.SystemDomain = args[index+1]
-							if !strings.HasSuffix(cta.SystemDomain, ".") {
-								cta.SystemDomain = cta.SystemDomain + "."
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						if (index + argCount) < len(args) {
+							if !strings.HasPrefix(args[index+1], "-") {
+								cta.SystemDomain = args[index+1]
+								if !strings.HasSuffix(cta.SystemDomain, ".") {
+									cta.SystemDomain = cta.SystemDomain + "."
+								}
+							} else {
+								*err = fmt.Errorf("No arguments provided for --sys-domain. Got %s instead", args[index+1])
 							}
 						} else {
-							*err = fmt.Errorf("No arguments provided for --sys-domain. Got %s instead", args[index+1])
+							*err = fmt.Errorf("No arguments provided for --sys-domain")
 						}
 					} else {
-						*err = fmt.Errorf("No arguments provided for --sys-domain")
+						*err = fmt.Errorf("%s does not support --sys-domain", cta.CommandName)
 					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--help": &certToolFlagProperty{
+				description:        "",
+				argumentCount:      0,
+				compatibleCommands: []string{""},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = fmt.Errorf("")
+					fmt.Println(cta.GetUsage(cta.CommandName))
 				},
 			},
 		},
 	}
 }
 
+// IsCurrentCommandSupported checks if the current command is supported by a given list of commands.
+func (cta *CertToolArguments) IsCurrentCommandSupported(compatibleCommands []string) bool {
+	var isSupported = false
+	for _, supportedCommand := range compatibleCommands {
+		if cta.CommandName == supportedCommand {
+			isSupported = true
+			break
+		}
+	}
+	return isSupported
+}
+
 // GetUsage returns the usage instruction text to display when help is called.
-func (cta *CertToolArguments) GetUsage() string {
+func (cta *CertToolArguments) GetUsage(commandToRun string) string {
 	var sb strings.Builder
-	var usageString = `Usage: %s [COMMAND] [--server-cert FILENAME [PRIVATE_KEY_FILENAME [PRIVATE_KEY_PASSPHRASE]]]...
-                          [--apps-domain APP_SUBDOMAIN] [--sys-domain SYS_SUBDOMAIN]
-                          [--cert FILENAME]... [--root-ca FILENAME]... [--find-root-ca]
+	var usageString = `Usage: %s COMMAND [--help] [FLAG1...FLAGn]
 
-     COMMAND: A specific command that this program will run. Possible values include:
-         1) verify  - Performs a set of certificate tests to ensure it is suitable for use on PCF
-         2) info    - Provides specific information on the certicate inputs
-         3) serve   - Create an HTTPS listener using a specific certificate input
-         4) decrypt - Decrypts a given private key with its corresponding passphrase
+	 COMMAND: A specific command that this program will run. Possible values include:`
 
-     FLAGS:`
-	sb.WriteRune('\n')
 	sb.WriteString(fmt.Sprintf(usageString, cta.programName))
-
 	sb.WriteRune('\n')
-
-	w := tabwriter.NewWriter(&sb, 0, 0, 2, ' ', 0)
-	for flag, property := range cta.flags {
-		fmt.Fprintf(w, "     %s:\t%s\n", flag, property.description)
+	var index = 1
+	for cmd, description := range COMMANDS {
+		sb.WriteString(fmt.Sprintf("	 %d) ", index))
+		sb.WriteString(cmd)
+		sb.WriteString(":\t")
+		sb.WriteString(description)
+		sb.WriteRune('\n')
+		index++
 	}
 
-	w.Flush()
+	sb.WriteRune('\n')
+	sb.WriteRune('\n')
+	if len(commandToRun) > 0 {
+		sb.WriteString("Supported Flags:\n")
+		w := tabwriter.NewWriter(&sb, 0, 0, 2, ' ', 0)
+		for flag, property := range cta.flags {
+			for _, supportedCommand := range property.compatibleCommands {
+				if commandToRun == supportedCommand {
+					fmt.Fprintf(w, "     %s:\t%s\n\n", flag, property.description)
+					break
+				}
+			}
+
+		}
+		w.Flush()
+	} else {
+		sb.WriteString("	 input --help after a command to get details about its flags\n")
+	}
 
 	return sb.String()
 }
@@ -264,8 +326,7 @@ func (cta *CertToolArguments) Process(args []string) (*CertToolArguments, error)
 	// Validate the command
 	if (cta.CommandName != "verify") &&
 		(cta.CommandName != "decrypt") &&
-		(cta.CommandName != "info") &&
-		(cta.CommandName != "serve") {
+		(cta.CommandName != "info") {
 		return nil, fmt.Errorf("Unknown command: %s", cta.CommandName)
 	}
 
@@ -278,7 +339,7 @@ func (cta *CertToolArguments) Process(args []string) (*CertToolArguments, error)
 	for idx := 0; idx < len(args); idx++ {
 		arg := args[idx]
 		if property, isCTAFlag := cta.flags[arg]; isCTAFlag {
-			property.handler(idx, args, property.argumentCount, cta, &err)
+			property.handler(idx, args, property.argumentCount, cta, property.compatibleCommands, &err)
 			idx += property.argumentCount
 		} else {
 			err = fmt.Errorf("Unknown flag encountered: %s", args[idx])

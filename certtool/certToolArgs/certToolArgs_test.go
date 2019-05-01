@@ -147,13 +147,6 @@ var _ = Describe("certToolArgs", func() {
 		Expect(cta.IntermediateCertFiles[1]).To(Equal("cert2.pem"))
 	})
 
-	It("should enable the find root ca flag using --find-root-ca ", func() {
-		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--find-root-ca"})
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(cta).ToNot(BeNil())
-		Expect(cta.FindRootCA).To(BeTrue())
-	})
-
 	It("should work with valid single private key using --private-key ", func() {
 		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--private-key", "server.key"})
 		Expect(err).ShouldNot(HaveOccurred())
@@ -227,7 +220,7 @@ var _ = Describe("certToolArgs", func() {
 	})
 
 	It("should be able to get the usage string  ", func() {
-		usageString := ctaArgs.GetUsage()
+		usageString := ctaArgs.GetUsage("")
 
 		Expect(len(usageString)).ToNot(BeZero())
 
