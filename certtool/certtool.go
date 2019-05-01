@@ -64,26 +64,30 @@ func main() {
 		fmt.Println("ERROR: Unknown Command Name - ", cta.CommandName)
 	}
 
-	results := cmd.Execute()
+	if cmd != nil {
+		results := cmd.Execute()
 
-	if results != nil {
-		// Print the result
-		for _, serverCertResult := range results {
-			for _, result := range serverCertResult {
-				if result.Error != nil {
-					fmt.Println("ERROR: Unable to execute Command - ", cmd.Name(), " - ", result.Error.Error())
-				} else {
-					fmt.Print("\n")
-					fmt.Println("---------------------------------------------------------------------")
-					fmt.Println(result.Title)
-					fmt.Println("---------------------------------------------------------------------")
-					for _, step := range result.StepResults {
-						fmt.Println("Task: ", step.Message)
-						fmt.Println("Status: ", step.StatusMessage)
+		if results != nil {
+			// Print the result
+			for _, serverCertResult := range results {
+				for _, result := range serverCertResult {
+					if result.Error != nil {
+						fmt.Println("ERROR: Unable to execute Command - ", cmd.Name(), " - ", result.Error.Error())
+					} else {
+						fmt.Print("\n")
+						fmt.Println("---------------------------------------------------------------------")
+						fmt.Println(result.Title)
+						fmt.Println("---------------------------------------------------------------------")
+						for _, step := range result.StepResults {
+							fmt.Println("Task: ", step.Message)
+							fmt.Println("Status: ", step.StatusMessage)
+						}
 					}
 				}
 			}
 		}
+	} else {
+		fmt.Printf("ERROR: Problem encountered when running the %s command. Unable to create the command.\n", cta.CommandName)
 	}
 
 }
