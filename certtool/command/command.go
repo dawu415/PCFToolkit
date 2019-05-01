@@ -15,7 +15,5 @@ func CreateVerifyCommand(certRepo *certificateRepository.CertificateRepository, 
 
 // CreateInfoCommand creates an Info Command
 func CreateInfoCommand(certRepo *certificateRepository.CertificateRepository) Command {
-	return &Info{
-		certRepo: certRepo,
-	}
+	return NewInfoCommand(certRepo)
 }

@@ -21,8 +21,8 @@ type Info struct {
 }
 
 // NewInfoCommand creates a new info command with a given certificate respository
-func NewInfoCommand(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string) *Verify {
-	return &Verify{
+func NewInfoCommand(certRepo *certificateRepository.CertificateRepository) *Info {
+	return &Info{
 		certRepo:      certRepo,
 		x509VerifyLib: x509Lib.NewX509Lib(),
 	}
@@ -164,16 +164,16 @@ func (cmd *Info) stepBuildCertificateChain(cert certificate.Certificate) Result 
 		}
 	}
 
-	var stepResult = StepResult{
-		Message:       fmt.Sprintf("%s", cert.Label),
-		Status:        StatusSuccess,
-		StatusMessage: chainString,
-	}
-
 	return Result{
-		Source:      SourceInfoCert,
-		Title:       fmt.Sprintf("Building Certificate Chain"),
-		StepResults: []StepResult{stepResult},
-		Error:       nil,
+		Source: SourceInfoCert,
+		Title:  fmt.Sprintf("Building Certificate Chain"),
+		StepResults: []StepResult{
+			StepResult{
+				Message:       fmt.Sprintf("%s", cert.Label),
+				Status:        StatusSuccess,
+				StatusMessage: chainString,
+			},
+		},
+		Error: nil,
 	}
 }
