@@ -115,11 +115,13 @@ func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certifi
 // server certificate
 func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Certificate) Result {
 
+	// We'll add the period at the end of the DNS names to ensure
+	// our string comparison method is strict on the format
 	DNSNames := []string{
-		"*." + cmd.appsDomain,
-		"*." + cmd.systemDomain,
-		"*.uaa." + cmd.systemDomain,
-		"*.login." + cmd.systemDomain,
+		"*." + cmd.appsDomain + ".",
+		"*." + cmd.systemDomain + ".",
+		"*.uaa." + cmd.systemDomain + ".",
+		"*.login." + cmd.systemDomain + ".",
 	}
 
 	var resultsArray []StepResult

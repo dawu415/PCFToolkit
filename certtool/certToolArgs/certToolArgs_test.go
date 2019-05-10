@@ -18,7 +18,7 @@ var _ = Describe("certToolArgs", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cta).To(BeNil())
 
-		cta, err = ctaArgs.Process([]string{"certtool", "serve"})
+		cta, err = ctaArgs.Process([]string{"certtool", "verify"})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cta).To(BeNil())
 	})
@@ -42,7 +42,7 @@ var _ = Describe("certToolArgs", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cta).To(BeNil()) // It's nil here because we didn't provide more arguments
 
-		cta, err = ctaArgs.Process([]string{"certtool", "serve"})
+		cta, err = ctaArgs.Process([]string{"certtool", "verify"})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cta).To(BeNil()) // It's nil here because we didn't provide more arguments
 	})
@@ -147,8 +147,8 @@ var _ = Describe("certToolArgs", func() {
 		Expect(cta.IntermediateCertFiles[1]).To(Equal("cert2.pem"))
 	})
 
-	It("should work with valid single private key using --private-key ", func() {
-		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--private-key", "server.key"})
+	It("should work with valid single private key using --private-key with the decrypt command ", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "decrypt", "--private-key", "server.key"})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cta).ToNot(BeNil())
 		Expect(len(cta.ServerCertFiles)).To(Equal(1))
@@ -157,8 +157,8 @@ var _ = Describe("certToolArgs", func() {
 		Expect(cta.ServerCertFiles[0].ServerCertPrivateKeyPassphrase).To(Equal(""))
 	})
 
-	It("should work with valid single private key + passphrase using --private-key ", func() {
-		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--private-key", "server.key,somesecret"})
+	It("should work with valid single private key + passphrase using --private-key with the decrypt command", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "decrypt", "--private-key", "server.key,somesecret"})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cta).ToNot(BeNil())
 		Expect(len(cta.ServerCertFiles)).To(Equal(1))
@@ -166,8 +166,8 @@ var _ = Describe("certToolArgs", func() {
 		Expect(cta.ServerCertFiles[0].ServerCertPrivateKeyFilename).To(Equal("server.key"))
 		Expect(cta.ServerCertFiles[0].ServerCertPrivateKeyPassphrase).To(Equal("somesecret"))
 	})
-	It("should work with valid single private key + passphrase + invalid input using --private-key ", func() {
-		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--private-key", "server.key,somesecret,blah"})
+	It("should work with valid single private key + passphrase + invalid input using --private-key with the decrypt command", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "decrypt", "--private-key", "server.key,somesecret,blah"})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cta).ToNot(BeNil())
 		Expect(len(cta.ServerCertFiles)).To(Equal(1))
@@ -176,8 +176,8 @@ var _ = Describe("certToolArgs", func() {
 		Expect(cta.ServerCertFiles[0].ServerCertPrivateKeyPassphrase).To(Equal("somesecret,blah"))
 	})
 
-	It("should work with valid multiple --private-key ", func() {
-		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--private-key", "server1.key,1234", "--private-key", "server2.key,1234"})
+	It("should work with valid multiple --private-key with the decrypt command", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "decrypt", "--private-key", "server1.key,1234", "--private-key", "server2.key,1234"})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cta).ToNot(BeNil())
 		Expect(len(cta.ServerCertFiles)).To(Equal(2))
@@ -219,12 +219,25 @@ var _ = Describe("certToolArgs", func() {
 		Expect(err).Should(HaveOccurred())
 	})
 
+	It("should fail if the verify command does not support a flag ", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "verify", "--private-key"})
+		Expect(err).Should(HaveOccurred())
+	})
+
+	It("should fail if the decrypt command does not support a flag ", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "decrypt", "--server-cert"})
+		Expect(err).Should(HaveOccurred())
+	})
+
+	It("should fail if a command is not supported  ", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "blahblahbah", "--server-cert"})
+		Expect(err).Should(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("Unknown command"))
+	})
+
 	It("should be able to get the usage string  ", func() {
 		usageString := ctaArgs.GetUsage("")
 
 		Expect(len(usageString)).ToNot(BeZero())
-
-		println(usageString)
-
 	})
 })

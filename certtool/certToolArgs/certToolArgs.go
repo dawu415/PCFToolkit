@@ -202,9 +202,6 @@ func NewCertToolArguments() *CertToolArguments {
 						if (index + argCount) < len(args) {
 							if !strings.HasPrefix(args[index+1], "-") {
 								cta.AppsDomain = args[index+1]
-								if !strings.HasSuffix(cta.AppsDomain, ".") {
-									cta.AppsDomain = cta.AppsDomain + "."
-								}
 							} else {
 								*err = fmt.Errorf("No arguments provided for --apps-domain. Got %s instead", args[index+1])
 							}
@@ -227,9 +224,6 @@ func NewCertToolArguments() *CertToolArguments {
 						if (index + argCount) < len(args) {
 							if !strings.HasPrefix(args[index+1], "-") {
 								cta.SystemDomain = args[index+1]
-								if !strings.HasSuffix(cta.SystemDomain, ".") {
-									cta.SystemDomain = cta.SystemDomain + "."
-								}
 							} else {
 								*err = fmt.Errorf("No arguments provided for --sys-domain. Got %s instead", args[index+1])
 							}
@@ -324,9 +318,7 @@ func (cta *CertToolArguments) Process(args []string) (*CertToolArguments, error)
 	args = args[1:] // remove the CommandName and leave only the flags to process
 
 	// Validate the command
-	if (cta.CommandName != "verify") &&
-		(cta.CommandName != "decrypt") &&
-		(cta.CommandName != "info") {
+	if _, ok := COMMANDS[cta.CommandName]; !ok {
 		return nil, fmt.Errorf("Unknown command: %s", cta.CommandName)
 	}
 
