@@ -65,7 +65,6 @@ func main() {
 	case "decrypt":
 	case "info":
 		cmd = command.CreateInfoCommand(certRepo)
-	case "serve":
 	default:
 		fmt.Println("ERROR: Unknown Command Name - ", cta.CommandName)
 	}
