@@ -21,9 +21,10 @@ func main() {
 		if len(err.Error()) > 0 {
 			fmt.Println("ERROR: ", err.Error())
 		}
-		return
-	} else if cta == nil {
-		fmt.Println(c.GetUsage(""))
+	}
+
+	if cta.PrintHelp == true {
+		fmt.Println(cta.GetUsage(cta.CommandName))
 		return
 	}
 

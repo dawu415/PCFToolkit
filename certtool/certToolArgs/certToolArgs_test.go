@@ -16,35 +16,35 @@ var _ = Describe("certToolArgs", func() {
 	It("Should fail to return a certToolArgs object if no arguments were supplied or if only the command argument was provided", func() {
 		cta, err := ctaArgs.Process([]string{"certtool"})
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(cta).To(BeNil())
+		Expect(cta).ToNot(BeNil())
 
 		cta, err = ctaArgs.Process([]string{"certtool", "verify"})
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(cta).To(BeNil())
+		Expect(cta).ToNot(BeNil())
 	})
 
 	It("Should fail if invalid command was provided", func() {
 		cta, err := ctaArgs.Process([]string{"certtool", "somerandom_command_thing"})
 		Expect(err).Should(HaveOccurred())
-		Expect(cta).To(BeNil())
+		Expect(cta).ToNot(BeNil())
 	})
 
 	It("Should not fail if valid command was provided", func() {
 		cta, err := ctaArgs.Process([]string{"certtool", "verify"})
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(cta).To(BeNil()) // It's nil here because we didn't provide more arguments
+		Expect(cta).ToNot(BeNil())
 
 		cta, err = ctaArgs.Process([]string{"certtool", "decrypt"})
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(cta).To(BeNil()) // It's nil here because we didn't provide more arguments
+		Expect(cta).ToNot(BeNil())
 
 		cta, err = ctaArgs.Process([]string{"certtool", "info"})
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(cta).To(BeNil()) // It's nil here because we didn't provide more arguments
+		Expect(cta).ToNot(BeNil())
 
 		cta, err = ctaArgs.Process([]string{"certtool", "verify"})
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(cta).To(BeNil()) // It's nil here because we didn't provide more arguments
+		Expect(cta).ToNot(BeNil())
 	})
 
 	It("should fail with invalid inputs to --server-cert ", func() {
@@ -121,6 +121,19 @@ var _ = Describe("certToolArgs", func() {
 		Expect(cta.RootCAFiles[0]).To(Equal("root.pem"))
 	})
 
+	It("should fail when --root-ca is not supported by a command ", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "decrypt", "--root-ca", "root.pem"})
+		Expect(err).Should(HaveOccurred())
+	})
+
+	It("should fail when --root-ca has no arguments ", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "verify", "--root-ca"})
+		Expect(err).Should(HaveOccurred())
+
+		_, err = ctaArgs.Process([]string{"certtool", "verify", "--root-ca", "--cert", "cert.pem"})
+		Expect(err).Should(HaveOccurred())
+	})
+
 	It("should work with valid multiple root ca using --root-ca ", func() {
 		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--root-ca", "root.pem", "--root-ca", "your-daddy.pem"})
 		Expect(err).ShouldNot(HaveOccurred())
@@ -138,6 +151,19 @@ var _ = Describe("certToolArgs", func() {
 		Expect(cta.IntermediateCertFiles[0]).To(Equal("cert.pem"))
 	})
 
+	It("should fail when --cert is not supported by a command", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "decrypt", "--cert", "cert.pem"})
+		Expect(err).Should(HaveOccurred())
+	})
+
+	It("should fail when --cert has no input arguments", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "verify", "--cert"})
+		Expect(err).Should(HaveOccurred())
+
+		_, err = ctaArgs.Process([]string{"certtool", "verify", "--cert", "--root-ca", "root.pem"})
+		Expect(err).Should(HaveOccurred())
+	})
+
 	It("should work with valid multiple cert using --cert ", func() {
 		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--cert", "cert1.pem", "--cert", "cert2.pem"})
 		Expect(err).ShouldNot(HaveOccurred())
@@ -145,6 +171,15 @@ var _ = Describe("certToolArgs", func() {
 		Expect(len(cta.IntermediateCertFiles)).To(Equal(2))
 		Expect(cta.IntermediateCertFiles[0]).To(Equal("cert1.pem"))
 		Expect(cta.IntermediateCertFiles[1]).To(Equal("cert2.pem"))
+	})
+
+	It("should fail with invalid arguments to --private-key with the decrypt command ", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "decrypt", "--private-key", "--certs", "cert.pem"})
+		Expect(err).Should(HaveOccurred())
+
+		_, err = ctaArgs.Process([]string{"certtool", "decrypt", "--private-key"})
+		Expect(err).Should(HaveOccurred())
+
 	})
 
 	It("should work with valid single private key using --private-key with the decrypt command ", func() {
@@ -204,6 +239,11 @@ var _ = Describe("certToolArgs", func() {
 		Expect(err).Should(HaveOccurred())
 	})
 
+	It("should failed if --apps-domain is not supported by a command", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "decrypt", "--apps-domain", "apps"})
+		Expect(err).Should(HaveOccurred())
+	})
+
 	It("should work with a valid --sys-domain ", func() {
 		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--sys-domain", "system"})
 		Expect(err).ShouldNot(HaveOccurred())
@@ -216,6 +256,19 @@ var _ = Describe("certToolArgs", func() {
 		Expect(err).Should(HaveOccurred())
 
 		_, err = ctaArgs.Process([]string{"certtool", "verify", "--sys-domain", "--balh"})
+		Expect(err).Should(HaveOccurred())
+	})
+
+	It("should failed with invalid input to --sys-domain ", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "verify", "--sys-domain"})
+		Expect(err).Should(HaveOccurred())
+
+		_, err = ctaArgs.Process([]string{"certtool", "verify", "--sys-domain", "--balh"})
+		Expect(err).Should(HaveOccurred())
+	})
+
+	It("should failed if --sys-domain is not supported by a command", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "decrypt", "--sys-domain", "sys"})
 		Expect(err).Should(HaveOccurred())
 	})
 
@@ -235,9 +288,40 @@ var _ = Describe("certToolArgs", func() {
 		Expect(err.Error()).To(ContainSubstring("Unknown command"))
 	})
 
+	It("should fail if an invalid flag is provided", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "verify", "--some-unsupported-thing"})
+		Expect(err).Should(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("Unknown flag encountered"))
+	})
+
+	It("should be able to get help for a specific command", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--help"})
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(cta.PrintHelp).To(BeTrue())
+	})
+
 	It("should be able to get the usage string  ", func() {
 		usageString := ctaArgs.GetUsage("")
 
 		Expect(len(usageString)).ToNot(BeZero())
+	})
+
+	It("should be able to get the usage string for a specific command ", func() {
+		usageStringNoCommand := ctaArgs.GetUsage("")
+
+		usageStringWithCommand := ctaArgs.GetUsage("verify")
+
+		Expect(len(usageStringNoCommand)).ToNot(BeZero())
+		Expect(len(usageStringWithCommand)).ToNot(BeZero())
+		Expect(len(usageStringWithCommand) > len(usageStringNoCommand)).Should(BeTrue())
+	})
+	It("should be able to get the usage string for a specific command even if it is invalid", func() {
+		usageStringNoCommand := ctaArgs.GetUsage("")
+
+		usageStringWithCommand := ctaArgs.GetUsage("booooooooo")
+
+		Expect(len(usageStringNoCommand)).ToNot(BeZero())
+		Expect(len(usageStringWithCommand)).ToNot(BeZero())
+		Expect(len(usageStringWithCommand) == len(usageStringNoCommand)).Should(BeTrue())
 	})
 })

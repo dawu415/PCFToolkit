@@ -46,6 +46,7 @@ type CertToolArguments struct {
 	SystemDomain          string
 	AppsDomain            string
 	flags                 map[string]*certToolFlagProperty // Private variable
+	PrintHelp             bool
 }
 
 // NewCertToolArguments returns an initialized certToolArguments struct
@@ -168,7 +169,7 @@ func NewCertToolArguments() *CertToolArguments {
 						if (index + argCount) < len(args) {
 							// For simplicity of code, lets not be generic and just assume the
 							// code here has the argument count of 1.
-							if !strings.HasPrefix(args[index+1], "-") {
+							if !strings.HasPrefix(args[index+1], "-") { // if the user did not input any arguments for --private-key
 								input := strings.SplitN(args[index+1], ",", 2)
 
 								cert := CertToolCertificateFileSet{}
@@ -241,8 +242,8 @@ func NewCertToolArguments() *CertToolArguments {
 				argumentCount:      0,
 				compatibleCommands: []string{""},
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
-					*err = fmt.Errorf("")
-					fmt.Println(cta.GetUsage(cta.CommandName))
+					*err = nil
+					cta.PrintHelp = true
 				},
 			},
 		},
@@ -282,7 +283,7 @@ func (cta *CertToolArguments) GetUsage(commandToRun string) string {
 
 	sb.WriteRune('\n')
 	sb.WriteRune('\n')
-	if len(commandToRun) > 0 {
+	if _, ok := COMMANDS[commandToRun]; len(commandToRun) > 0 && ok {
 		sb.WriteString("Supported Flags:\n")
 		w := tabwriter.NewWriter(&sb, 0, 0, 2, ' ', 0)
 		for flag, property := range cta.flags {
@@ -310,7 +311,8 @@ func (cta *CertToolArguments) Process(args []string) (*CertToolArguments, error)
 	// If there were no other arguments, we can short circuit the Process method
 	// Let the caller handle the state if the arguments are nil
 	if len(args) == 0 {
-		return nil, nil
+		cta.PrintHelp = true
+		return cta, nil
 	}
 
 	// Determine the command type
@@ -319,11 +321,15 @@ func (cta *CertToolArguments) Process(args []string) (*CertToolArguments, error)
 
 	// Validate the command
 	if _, ok := COMMANDS[cta.CommandName]; !ok {
-		return nil, fmt.Errorf("Unknown command: %s", cta.CommandName)
+		cta.PrintHelp = true
+		err := fmt.Errorf("Unknown command: %s", cta.CommandName)
+		cta.CommandName = ""
+		return cta, err
 	}
 
 	if len(args) == 0 {
-		return nil, nil
+		cta.PrintHelp = true
+		return cta, nil
 	}
 
 	var err error
@@ -334,6 +340,7 @@ func (cta *CertToolArguments) Process(args []string) (*CertToolArguments, error)
 			property.handler(idx, args, property.argumentCount, cta, property.compatibleCommands, &err)
 			idx += property.argumentCount
 		} else {
+			cta.PrintHelp = true
 			err = fmt.Errorf("Unknown flag encountered: %s", args[idx])
 		}
 
