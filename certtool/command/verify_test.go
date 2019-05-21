@@ -49,8 +49,8 @@ var _ = Describe("Verify Command Test", func() {
 		keyLoader = privatekey_mock.NewPrivateKeyMock()
 		certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, keyLoader)
 
-		systemDomain = "sys."
-		appDomain = "apps."
+		systemDomain = "sys"
+		appDomain = "apps"
 		verifyCommand = command.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, mockVerifyLib)
 	})
 
