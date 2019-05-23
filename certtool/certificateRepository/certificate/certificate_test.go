@@ -46,6 +46,7 @@ var _ = Describe("Certificate tests", func() {
 		Expect(c[0].Label).To(Equal("servercert"))
 		Expect(c[0].Certificate.Raw).To(Equal([]byte("PEM")))
 		Expect(c[0].Type).To(Equal(certificate.TypeRootCACertificate))
+		Expect(c[0].IsRootCert()).To(BeTrue())
 	})
 
 	It("should be able to successfully load a server cert", func() {

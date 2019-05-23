@@ -2,6 +2,8 @@ package x509Lib
 
 import (
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 )
@@ -9,6 +11,7 @@ import (
 // Interface defines a thin wrapper to the crypto/x509 module
 type Interface interface {
 	TrustChainExistOn(serverCert certificate.Certificate, rootCerts, intermediateCerts []certificate.Certificate) bool
+	GetPartialSystemCertificates() ([]certificate.Certificate, error)
 }
 
 // X509Lib defines the data associated with the x509Kib
@@ -33,6 +36,28 @@ func (x *X509Lib) TrustChainExistOn(serverCert certificate.Certificate, rootCert
 	}
 
 	return trustChainExists
+}
+
+// GetPartialSystemCertificates returns an array of partial system root certificates from the system store.
+// It is partial because we only return certificates containing the issuer and subject, which should be identical.
+func (x *X509Lib) GetPartialSystemCertificates() ([]certificate.Certificate, error) {
+	var systemCerts []certificate.Certificate
+	certPool, e := x509.SystemCertPool()
+
+	if e == nil {
+		for _, subject := range certPool.Subjects() {
+			subjectRDN := &pkix.RDNSequence{}
+			asn1.Unmarshal(subject, subjectRDN)
+			var pkixName = pkix.Name{}
+			pkixName.FillFromRDNSequence(subjectRDN)
+			systemCerts = append(systemCerts, certificate.Certificate{
+				Type:        certificate.TypeRootCACertificate,
+				Certificate: &x509.Certificate{Issuer: pkixName, Subject: pkixName},
+				Label:       "System Trust Store: " + pkixName.CommonName,
+			})
+		}
+	}
+	return systemCerts, e
 }
 
 // convertCertRepoCertArrayToX509CertPool is a helper function that pushes an array of

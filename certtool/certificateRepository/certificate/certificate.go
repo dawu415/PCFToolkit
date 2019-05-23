@@ -76,6 +76,11 @@ func (cert *Certificate) LoadPEMCertificates(label string, PEMCertBytes []byte) 
 	return certificates, err
 }
 
+// IsRootCert returns true if the input certificate is a root certificate
+func (cert *Certificate) IsRootCert() bool {
+	return cert.isRootCert(cert.Certificate)
+}
+
 func (cert *Certificate) determineCertificateType(certificate *x509.Certificate) int {
 	if cert.isServerCert(certificate) {
 		return TypeServerCertificate

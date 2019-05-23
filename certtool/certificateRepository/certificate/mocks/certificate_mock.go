@@ -2,6 +2,7 @@ package certificate_mock
 
 import (
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"time"
 
@@ -16,6 +17,8 @@ type CertificateMock struct {
 	NotBefore                time.Time
 	NotAfter                 time.Time
 	PublicKey                interface{}
+	IssuerCN                 string
+	SubjectCN                string
 }
 
 // NewPEMCertificateMock creates a mock interface for the PEMCertificate for testing
@@ -41,6 +44,8 @@ func (cert *CertificateMock) LoadPEMCertificates(label string, PEMCertBytes []by
 				NotAfter:  cert.NotAfter,
 				NotBefore: cert.NotBefore,
 				PublicKey: cert.PublicKey,
+				Issuer:    pkix.Name{CommonName: cert.IssuerCN},
+				Subject:   pkix.Name{CommonName: cert.SubjectCN},
 			}, // Placeholder to hold the PEMCertBytes
 		},
 	}, err

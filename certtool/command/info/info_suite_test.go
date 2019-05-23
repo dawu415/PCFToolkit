@@ -1,4 +1,4 @@
-package command_test
+package info
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestVerifyCommand(t *testing.T) {
+func TestInfoCommand(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Verify Command Test")
+	RunSpecs(t, "Info Command Test")
 }

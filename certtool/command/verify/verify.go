@@ -1,10 +1,12 @@
-package command
+package verify
 
 import (
 	"crypto/rsa"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/dawu415/PCFToolkit/certtool/command/result"
 
 	"github.com/dawu415/PCFToolkit/certtool/command/x509Lib"
 
@@ -48,14 +50,14 @@ func (cmd *Verify) Name() string {
 }
 
 // Execute performs the command
-func (cmd *Verify) Execute() [][]Result {
+func (cmd *Verify) Execute() result.Result {
 
-	var results [][]Result
+	var results [][]ResultData
 	useSystemRootCerts := true
 
 	serverCertCount := len(cmd.certRepo.ServerCerts)
 	if serverCertCount > 0 {
-		results = make([][]Result, serverCertCount)
+		results = make([][]ResultData, serverCertCount)
 	}
 
 	for idx, serverCert := range cmd.certRepo.ServerCerts {
@@ -73,14 +75,16 @@ func (cmd *Verify) Execute() [][]Result {
 		results[idx] = append(results[idx], cmd.stepCheckCertificateExpiry(serverCert))
 		results[idx] = append(results[idx], cmd.stepCheckCertificateWithProvidedPrivateKey(serverCert, cmd.certRepo.PrivateKeys))
 	}
-	return results
+	return &Result{
+		results: results,
+	}
 }
 
 // stepCheckCertificateTrustChain determines if a server certificate has a trust chain with
 // provided intermediate and root certificates.
 // If ignoreCertRepoRootCA is true, the command ensures that the Certificate trust chain is determined from
 // the system trust store instead of provided root certificates.
-func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certificate, ignoreCertRepoRootCA bool) Result {
+func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certificate, ignoreCertRepoRootCA bool) ResultData {
 
 	rootCertMessage := "using System Root Certificates."
 	var rootCertificates []certificate.Certificate
@@ -91,29 +95,29 @@ func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certifi
 
 	hasTrustedChain := cmd.x509VerifyLib.TrustChainExistOn(serverCert, rootCertificates, cmd.certRepo.IntermediateCerts)
 
-	verifyStepResult := StepResult{
+	verifyStepResult := StepResultData{
 		Message: fmt.Sprintf("Verifying trust chain of %s", serverCert.Label),
 	}
 
 	if hasTrustedChain {
-		verifyStepResult.Status = StatusSuccess
+		verifyStepResult.Status = result.StatusSuccess
 		verifyStepResult.StatusMessage = "OK!"
 	} else {
-		verifyStepResult.Status = StatusFailed
+		verifyStepResult.Status = result.StatusFailed
 		verifyStepResult.StatusMessage = "FAILED!"
 	}
 
-	return Result{
+	return ResultData{
 		Source:      SourceVerifyTrustChain,
 		Title:       fmt.Sprintf("Verifying Certificate Trust Chain %s", rootCertMessage),
-		StepResults: []StepResult{verifyStepResult},
+		StepResults: []StepResultData{verifyStepResult},
 		Error:       nil,
 	}
 }
 
 // stepCheckCertificateDomainsForPCF checks to see if the required PCF DNS names exists in a
 // server certificate
-func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Certificate) Result {
+func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Certificate) ResultData {
 
 	// We'll add the period at the end of the DNS names to ensure
 	// our string comparison method is strict on the format
@@ -124,7 +128,7 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 		"*.login." + cmd.systemDomain + ".",
 	}
 
-	var resultsArray []StepResult
+	var resultsArray []StepResultData
 	for _, dnsName := range DNSNames {
 		var found = false
 		for _, dnsInCert := range serverCert.Certificate.DNSNames {
@@ -134,21 +138,21 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 			}
 		}
 
-		stepResult := StepResult{
+		stepResult := StepResultData{
 			Message: fmt.Sprintf("Checking %s", dnsName),
 		}
 
 		if found {
-			stepResult.Status = StatusSuccess
+			stepResult.Status = result.StatusSuccess
 			stepResult.StatusMessage = "FOUND!"
 		} else {
-			stepResult.Status = StatusFailed
+			stepResult.Status = result.StatusFailed
 			stepResult.StatusMessage = "X"
 		}
 		resultsArray = append(resultsArray, stepResult)
 
 	}
-	return Result{
+	return ResultData{
 		Source:      SourceVerifyCertSANS,
 		Title:       "Checking PCF SANs on Certificate",
 		StepResults: resultsArray,
@@ -157,9 +161,9 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 }
 
 // stepCheckCertificateExpiry checks the expiry of a certificate with in a 6 month period.
-func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate) Result {
+func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate) ResultData {
 
-	stepResult := StepResult{
+	stepResult := StepResultData{
 		Message: fmt.Sprintf("Verifying %s\nValid From:\t%s UNTIL %s\n", serverCert.Label, serverCert.Certificate.NotBefore.String(), serverCert.Certificate.NotAfter.String()),
 	}
 
@@ -169,31 +173,31 @@ func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate
 		currentTime.Before(serverCert.Certificate.NotAfter) {
 		// Check if our server cert will expire within the next 6 months.
 		if currentTime.AddDate(0, 6, 0).Before(serverCert.Certificate.NotAfter) {
-			stepResult.Status = StatusSuccess
+			stepResult.Status = result.StatusSuccess
 			stepResult.StatusMessage = "OK!"
 		} else {
-			stepResult.Status = StatusWarning
+			stepResult.Status = result.StatusWarning
 			stepResult.StatusMessage = fmt.Sprintf("WARNING - This certificate expires in %0.2f days (%0.2f months)\n", serverCert.Certificate.NotAfter.Sub(currentTime).Hours()/24, serverCert.Certificate.NotAfter.Sub(currentTime).Hours()/(24*365/12))
 		}
 	} else {
-		stepResult.Status = StatusFailed
+		stepResult.Status = result.StatusFailed
 		stepResult.StatusMessage = "FAILED! Certificate Expired!"
 	}
 
-	return Result{
+	return ResultData{
 		Source:      SourceVerifyCertExpiry,
 		Title:       "Checking Certificate Expiry",
-		StepResults: []StepResult{stepResult},
+		StepResults: []StepResultData{stepResult},
 		Error:       nil,
 	}
 }
 
 // stepCheckCertificateWithProvidedPrivateKey determines if a server certificate and its corresponding
 // provided private key match.
-func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certificate.Certificate, privateKeys map[string]privatekey.PrivateKey) Result {
+func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certificate.Certificate, privateKeys map[string]privatekey.PrivateKey) ResultData {
 	// If the modulus of the private key is equal the server cert's modulus, it matches
 	var err error
-	stepResult := StepResult{}
+	stepResult := StepResultData{}
 
 	if key, ok := privateKeys[serverCert.Label]; ok {
 		stepResult.Message = fmt.Sprintf("Verifying matching certificate and key:\t%s with %s\n", serverCert.Label, key.Label)
@@ -201,33 +205,33 @@ func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certifi
 		if pubKey, ok := serverCert.Certificate.PublicKey.(rsa.PublicKey); ok {
 			if privateKey, ok := key.PrivateKey.(rsa.PrivateKey); ok {
 				if pubKey.N == privateKey.N {
-					stepResult.Status = StatusSuccess
+					stepResult.Status = result.StatusSuccess
 					stepResult.StatusMessage = "OK!"
 				} else {
-					stepResult.Status = StatusFailed
+					stepResult.Status = result.StatusFailed
 					stepResult.StatusMessage = "FAILED!"
 				}
 			} else {
-				stepResult.Status = StatusFailed
+				stepResult.Status = result.StatusFailed
 				stepResult.StatusMessage = "FAILED!"
 				err = fmt.Errorf("Something is wrong with the private Key. Unable to assert the private key into an RSA PrivateKey Type. Check the data format input (Should be DER Base64 bytes) or re-download the private key")
 			}
 		} else {
-			stepResult.Status = StatusFailed
+			stepResult.Status = result.StatusFailed
 			stepResult.StatusMessage = "FAILED!"
 			err = fmt.Errorf("Something is wrong with the public Key. Unable to assert the public key into an RSA PublicKey Type. Check the data format input (Should be ASN.1 Base64 bytes) or re-download the public key")
 		}
 
 	} else {
 		stepResult.Message = "Could not check matching of certificate and private key. Private key not provided."
-		stepResult.Status = StatusNotChecked
+		stepResult.Status = result.StatusNotChecked
 		stepResult.StatusMessage = "NOT CHECKED"
 	}
 
-	return Result{
+	return ResultData{
 		Source:      SourceVerifyCertPrivateKeyMatch,
 		Title:       "Checking the certificate and private key match",
-		StepResults: []StepResult{stepResult},
+		StepResults: []StepResultData{stepResult},
 		Error:       err,
 	}
 }

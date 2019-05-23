@@ -1,4 +1,4 @@
-package command_test
+package verify_test
 
 import (
 	"crypto/rsa"
@@ -11,17 +11,17 @@ import (
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate/mocks"
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/fileIO/mocks"
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey/mocks"
-	"github.com/dawu415/PCFToolkit/certtool/command"
+	"github.com/dawu415/PCFToolkit/certtool/command/result"
+	"github.com/dawu415/PCFToolkit/certtool/command/verify"
 	"github.com/dawu415/PCFToolkit/certtool/command/x509Lib/mocks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-func filterSourceVerifyResults(sourceResults [][]command.Result, sourceType int) []command.Result {
-	var filteredSourceVerifyResults []command.Result
+func filterSourceVerifyResults(sourceResults [][]verify.ResultData, sourceType int) []verify.ResultData {
+	var filteredSourceVerifyResults []verify.ResultData
 	for _, sourceResult := range sourceResults {
 		for _, verifyResult := range sourceResult {
-
 			if verifyResult.Source == sourceType {
 				filteredSourceVerifyResults = append(filteredSourceVerifyResults, verifyResult)
 			}
@@ -32,7 +32,7 @@ func filterSourceVerifyResults(sourceResults [][]command.Result, sourceType int)
 
 var _ = Describe("Verify Command Test", func() {
 
-	var verifyCommand *command.Verify
+	var verifyCommand *verify.Verify
 	var mockVerifyLib *x509libmock.X509LibMock
 	var certRepo *certificateRepository.CertificateRepository
 	var fileIOMock *fileIO_mock.MockFileIO
@@ -51,7 +51,12 @@ var _ = Describe("Verify Command Test", func() {
 
 		systemDomain = "sys"
 		appDomain = "apps"
-		verifyCommand = command.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, mockVerifyLib)
+		verifyCommand = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, mockVerifyLib)
+	})
+
+	It("should return a verify command object", func() {
+		verifyCmd := verify.NewVerifyCommand(certRepo, "testsys", "testapp")
+		Expect(verifyCmd).ShouldNot(BeNil())
 	})
 
 	It("should be called the verify command", func() {
@@ -60,7 +65,10 @@ var _ = Describe("Verify Command Test", func() {
 
 	Context("There are no server certs", func() {
 		It("should return nil", func() {
-			Expect(verifyCommand.Execute()).Should(BeNil())
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(verifyResult).Should(BeNil())
 		})
 	})
 
@@ -74,7 +82,10 @@ var _ = Describe("Verify Command Test", func() {
 		certRepo.InstallCertificates("somefile1.pem")
 		certRepo.InstallCertificates("somefile2.pem")
 
-		Expect(verifyCommand.Execute()).Should(HaveLen(2))
+		verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
+		Expect(ok).To(BeTrue())
+
+		Expect(verifyResult).Should(HaveLen(2))
 	})
 
 	Context("No RootCA was provided", func() {
@@ -89,34 +100,36 @@ var _ = Describe("Verify Command Test", func() {
 		})
 		It("should still run when TrustChain exists", func() {
 			mockVerifyLib.TrustChainExist = true
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
 			Expect(certRepo.RootCACerts).Should(HaveLen(0))
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyTrustChain)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
 			Expect(filteredResults).ToNot(BeNil())
 
 			for _, verifyResult := range filteredResults {
 				for _, stepResult := range verifyResult.StepResults {
-					Expect(stepResult.Status).To(Equal(command.StatusSuccess))
+					Expect(stepResult.Status).To(Equal(result.StatusSuccess))
 				}
 			}
 		})
 
 		It("should still run when TrustChain does not exist", func() {
 			mockVerifyLib.TrustChainExist = false
-			verifyResult := verifyCommand.Execute()
-			Expect(certRepo.RootCACerts).Should(HaveLen(0))
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
+			Expect(certRepo.RootCACerts).Should(HaveLen(0))
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyTrustChain)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
 			Expect(filteredResults).ToNot(BeNil())
 
 			for _, verifyResult := range filteredResults {
 				for _, stepResult := range verifyResult.StepResults {
-					Expect(stepResult.Status).To(Equal(command.StatusFailed))
+					Expect(stepResult.Status).To(Equal(result.StatusFailed))
 				}
 			}
 		})
@@ -139,34 +152,38 @@ var _ = Describe("Verify Command Test", func() {
 		})
 		It("should still run when TrustChain exists", func() {
 			mockVerifyLib.TrustChainExist = true
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
 
 			Expect(certRepo.RootCACerts).Should(HaveLen(1))
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyTrustChain)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
 			Expect(filteredResults).ToNot(BeNil())
 
 			for _, verifyResult := range filteredResults {
 				for _, stepResult := range verifyResult.StepResults {
-					Expect(stepResult.Status).To(Equal(command.StatusSuccess))
+					Expect(stepResult.Status).To(Equal(result.StatusSuccess))
 				}
 			}
 		})
 
 		It("should still run when TrustChain does not exist", func() {
 			mockVerifyLib.TrustChainExist = false
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
 			Expect(certRepo.RootCACerts).Should(HaveLen(1))
 
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyTrustChain)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
 			Expect(filteredResults).ToNot(BeNil())
 
 			for _, verifyResult := range filteredResults {
 				for _, stepResult := range verifyResult.StepResults {
-					Expect(stepResult.Status).To(Equal(command.StatusFailed))
+					Expect(stepResult.Status).To(Equal(result.StatusFailed))
 				}
 			}
 		})
@@ -184,11 +201,13 @@ var _ = Describe("Verify Command Test", func() {
 			certRepo.InstallCertificates("somefile1.pem")
 		})
 		It("should run and provide tests for each subdomain types", func() {
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
 
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyCertSANS)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertSANS)
 			Expect(filteredResults).ToNot(BeNil())
 
 			for _, verifyResult := range filteredResults {
@@ -201,9 +220,9 @@ var _ = Describe("Verify Command Test", func() {
 						}
 					}
 					if found {
-						Expect(stepResult.Status).To(Equal(command.StatusSuccess))
+						Expect(stepResult.Status).To(Equal(result.StatusSuccess))
 					} else {
-						Expect(stepResult.Status).To(Equal(command.StatusFailed))
+						Expect(stepResult.Status).To(Equal(result.StatusFailed))
 					}
 				}
 			}
@@ -224,56 +243,60 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.NotAfter = time.Now().AddDate(0, -2, 0) // Expired 2 months ago
 			certRepo.InstallCertificates("somefile1.pem")
 
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyCertExpiry)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertExpiry)
 			Expect(filteredResults).To(HaveLen(1))
 
-			Expect(filteredResults[0].StepResults[0].Status).To(Equal(command.StatusFailed))
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
 		})
 
 		It("should fail if certificate is not valid yet", func() {
 			certLoader.NotBefore = time.Now().AddDate(0, 5, 0) // Valid 5 months from now.
 			certLoader.NotAfter = time.Now().AddDate(0, 10, 0)
 			certRepo.InstallCertificates("somefile1.pem")
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyCertExpiry)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertExpiry)
 			Expect(filteredResults).To(HaveLen(1))
 
-			Expect(filteredResults[0].StepResults[0].Status).To(Equal(command.StatusFailed))
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
 		})
 
 		It("should warn if certificate has less than 6 months left", func() {
 			certLoader.NotBefore = time.Now()
 			certLoader.NotAfter = time.Now().AddDate(0, 6, 0)
 			certRepo.InstallCertificates("somefile1.pem")
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyCertExpiry)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertExpiry)
 			Expect(filteredResults).To(HaveLen(1))
 
-			Expect(filteredResults[0].StepResults[0].Status).To(Equal(command.StatusWarning))
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusWarning))
 		})
 
 		It("should succeed if certificate has more than 6 months left", func() {
 			certLoader.NotBefore = time.Now()
 			certLoader.NotAfter = time.Now().AddDate(0, 7, 0)
 			certRepo.InstallCertificates("somefile1.pem")
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyCertExpiry)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertExpiry)
 			Expect(filteredResults).To(HaveLen(1))
 
-			Expect(filteredResults[0].StepResults[0].Status).To(Equal(command.StatusSuccess))
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusSuccess))
 		})
 	})
 
@@ -290,46 +313,49 @@ var _ = Describe("Verify Command Test", func() {
 		It("should not check if private key was not provided", func() {
 			certRepo.InstallCertificates("somefile1.pem")
 
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
 			Expect(certRepo.PrivateKeys).Should(HaveLen(0))
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyCertPrivateKeyMatch)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertPrivateKeyMatch)
 			Expect(filteredResults).To(HaveLen(1))
 
-			Expect(filteredResults[0].StepResults[0].Status).To(Equal(command.StatusNotChecked))
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusNotChecked))
 		})
 
 		It("should fail if public key has invalid interface", func() {
 
 			// By default, the Certificate Mock has an empty PublicKey
 			certRepo.InstallCertificateWithPrivateKey("serverCert.crt", "private.key", "")
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
 			Expect(certRepo.PrivateKeys).Should(HaveLen(1))
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyCertPrivateKeyMatch)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertPrivateKeyMatch)
 			Expect(filteredResults).To(HaveLen(1))
 
 			Expect(filteredResults[0].Error).ToNot(BeNil())
-			Expect(filteredResults[0].StepResults[0].Status).To(Equal(command.StatusFailed))
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
 		})
 		It("should fail if private key has invalid interface", func() {
 			// By default, the private key of keyload is empty
 			certLoader.PublicKey = rsa.PublicKey{}
 			certRepo.InstallCertificateWithPrivateKey("serverCert.crt", "private.key", "")
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
 			Expect(certRepo.PrivateKeys).Should(HaveLen(1))
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyCertPrivateKeyMatch)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertPrivateKeyMatch)
 			Expect(filteredResults).To(HaveLen(1))
 
 			Expect(filteredResults[0].Error).ToNot(BeNil())
-			Expect(filteredResults[0].StepResults[0].Status).To(Equal(command.StatusFailed))
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
 		})
 		It("should be successful if private key and public key match", func() {
 			var publicKeyModulus = big.Int{}
@@ -337,16 +363,17 @@ var _ = Describe("Verify Command Test", func() {
 			keyLoader.PrivateKey = rsa.PrivateKey{PublicKey: rsa.PublicKey{N: &publicKeyModulus}}
 			certLoader.PublicKey = rsa.PublicKey{N: &publicKeyModulus}
 			certRepo.InstallCertificateWithPrivateKey("serverCert.crt", "private.key", "")
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
 			Expect(certRepo.PrivateKeys).Should(HaveLen(1))
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyCertPrivateKeyMatch)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertPrivateKeyMatch)
 			Expect(filteredResults).To(HaveLen(1))
 
 			Expect(filteredResults[0].Error).To(BeNil())
-			Expect(filteredResults[0].StepResults[0].Status).To(Equal(command.StatusSuccess))
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusSuccess))
 		})
 		It("should be fail if private key and public key don't match", func() {
 			var publicKeyModulus = big.Int{}
@@ -356,16 +383,17 @@ var _ = Describe("Verify Command Test", func() {
 			keyLoader.PrivateKey = rsa.PrivateKey{PublicKey: rsa.PublicKey{N: &privateKeyModulus}}
 			certLoader.PublicKey = rsa.PublicKey{N: &publicKeyModulus}
 			certRepo.InstallCertificateWithPrivateKey("serverCert.crt", "private.key", "")
-			verifyResult := verifyCommand.Execute()
+			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
+			Expect(ok).To(BeTrue())
 			Expect(certRepo.PrivateKeys).Should(HaveLen(1))
 			Expect(verifyResult).Should(HaveLen(1))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
-			filteredResults := filterSourceVerifyResults(verifyResult, command.SourceVerifyCertPrivateKeyMatch)
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertPrivateKeyMatch)
 			Expect(filteredResults).To(HaveLen(1))
 
 			Expect(filteredResults[0].Error).To(BeNil())
-			Expect(filteredResults[0].StepResults[0].Status).To(Equal(command.StatusFailed))
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
 		})
 
 	})
