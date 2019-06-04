@@ -48,6 +48,7 @@ func (key *PrivateKey) LoadPEMPrivateKey(privateKeylabel, serverCertLabel string
 
 	// Assume that there is only 1 private key in the file
 	privateKeyBlock, _ := key.pemDecoder.Decode(PEMKeyBytes)
+
 	if privateKeyBlock != nil {
 		if decodedPrivateKeyBytes, err = key.pemDecoder.DecryptPEM(privateKeyBlock, passphrase, privateKeylabel); err == nil {
 			if x509ParsedPrivateKey, err = key.x509Parser.ParsePrivateKey(decodedPrivateKeyBytes); err == nil {
