@@ -10,9 +10,9 @@ import (
 
 // COMMANDS is the list of supported commands in this application
 var COMMANDS = map[string]string{
-	"verify":  "Performs a set of certificate tests to ensure it is suitable for use on PCF",
-	"info":    "Provides specific information on the certicate inputs",
-	"decrypt": "Decrypts a given private key with its corresponding passphrase",
+	"verify": "Performs a set of certificate tests to ensure it is suitable for use on PCF",
+	"info":   "Provides specific information on the certicate inputs",
+	//"decrypt": "Decrypts a given private key with its corresponding passphrase",
 }
 
 // Interface describes the interface to process input commandline arguments
@@ -21,7 +21,7 @@ type Interface interface {
 	GetUsage() string
 }
 
-// CSPFlagProperty defines a flag in create-service-push, its properties and a handler to decode output to a CSPArgument struct
+// certToolFlagProperty defines a flag for the cert tool
 type certToolFlagProperty struct {
 	description        string
 	argumentCount      int
