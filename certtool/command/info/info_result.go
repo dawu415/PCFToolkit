@@ -31,9 +31,10 @@ type CertificateTrustChains struct {
 func (result *Result) Out() {
 
 	var crtTypeStr = map[int]string{
-		certificate.TypeServerCertificate:       "Server Certificate",
-		certificate.TypeRootCACertificate:       "Root Certificate",
-		certificate.TypeIntermediateCertificate: "Intermediate Certificate",
+		certificate.TypeServerCertificate:           "Server Certificate",
+		certificate.TypeRootCACertificate:           "Root Certificate",
+		certificate.TypeIntermediateCertificate:     "Intermediate Certificate",
+		certificate.TypeSelfSignedServerCertificate: "Self-Signed Server Certificate",
 	}
 
 	for _, cert := range result.certificates {

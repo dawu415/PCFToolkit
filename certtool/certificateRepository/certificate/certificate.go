@@ -14,9 +14,10 @@ import (
 
 // Constants/Enums used to define a certificate type
 const (
-	TypeServerCertificate       = iota
-	TypeRootCACertificate       = iota
-	TypeIntermediateCertificate = iota
+	TypeServerCertificate           = iota
+	TypeRootCACertificate           = iota
+	TypeIntermediateCertificate     = iota
+	TypeSelfSignedServerCertificate = iota
 )
 
 // PEMCertificateLoaderInterface defines the interface to load a PEM certificate
@@ -83,7 +84,11 @@ func (cert *Certificate) IsRootCert() bool {
 
 func (cert *Certificate) determineCertificateType(certificate *x509.Certificate) int {
 	if cert.isServerCert(certificate) {
-		return TypeServerCertificate
+		if cert.isRootCert(certificate) {
+			return TypeSelfSignedServerCertificate
+		} else {
+			return TypeServerCertificate
+		}
 	} else if cert.isRootCert(certificate) {
 		return TypeRootCACertificate
 	}

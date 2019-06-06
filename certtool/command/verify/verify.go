@@ -59,7 +59,6 @@ func (cmd *Verify) Execute() result.Result {
 	if serverCertCount > 0 {
 		results = make([][]ResultData, serverCertCount)
 	}
-
 	for idx, serverCert := range cmd.certRepo.ServerCerts {
 		// Check if the user provided the root CA certs.
 		if len(cmd.certRepo.RootCACerts) == 0 {

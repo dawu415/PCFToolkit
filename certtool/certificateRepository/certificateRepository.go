@@ -82,7 +82,7 @@ func (repo *CertificateRepository) InstallCertificates(certFilename string) erro
 		certificates, err = repo.certificateLoader.LoadPEMCertificates(certFilename, PEMCertBytes)
 		if err == nil {
 			for _, cert := range certificates {
-				if cert.Type == certificate.TypeServerCertificate {
+				if cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate {
 					repo.ServerCerts = append(repo.ServerCerts, cert)
 				} else if cert.Type == certificate.TypeRootCACertificate {
 					repo.RootCACerts = append(repo.RootCACerts, cert)
