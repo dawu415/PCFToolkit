@@ -27,5 +27,5 @@ func (x *X509ParseData) ParseCertificates(asn1Data []byte) ([]*x509.Certificate,
 // ParsePrivateKey parses a private key in DER byte format. It is assumed that the private key
 // is unencrypted at this point.
 func (x *X509ParseData) ParsePrivateKey(der []byte) (key interface{}, err error) {
-	return x509.ParsePKCS8PrivateKey(der)
+	return x509.ParsePKCS1PrivateKey(der)
 }
