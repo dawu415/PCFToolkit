@@ -48,26 +48,13 @@ func main() {
 
 	// Install the Server certificates
 	for _, serverCertFileSet := range cta.ServerCertFiles {
-		if len(serverCertFileSet.ServerCertFilename) != 0 {
-			if err := certRepo.
-				InstallCertificateWithPrivateKey(
-					serverCertFileSet.ServerCertFilename,
-					serverCertFileSet.ServerCertPrivateKeyFilename,
-					serverCertFileSet.ServerCertPrivateKeyPassphrase); err != nil {
-				fmt.Println("ERROR: ", err.Error())
-				return
-			}
-		} else {
-			// Special case if the server certificate wasn't provided but only the private key
-			// This is used for the decryption command
-			if err := certRepo.
-				InstallPrivateKey(
-					serverCertFileSet.ServerCertPrivateKeyFilename,
-					serverCertFileSet.ServerCertPrivateKeyFilename,
-					serverCertFileSet.ServerCertPrivateKeyPassphrase); err != nil {
-				fmt.Println("ERROR: ", err.Error())
-				return
-			}
+		if err := certRepo.
+			InstallCertificateWithPrivateKey(
+				serverCertFileSet.ServerCertFilename,
+				serverCertFileSet.ServerCertPrivateKeyFilename,
+				serverCertFileSet.ServerCertPrivateKeyPassphrase); err != nil {
+			fmt.Println("ERROR: ", err.Error())
+			return
 		}
 	}
 	// Create the appropriate comand and execute it.
