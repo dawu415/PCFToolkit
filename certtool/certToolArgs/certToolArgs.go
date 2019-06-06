@@ -62,7 +62,7 @@ func NewCertToolArguments() *CertToolArguments {
 		flags: map[string]*certToolFlagProperty{
 			/////////////////////////////////////////////////
 			"--server-cert": &certToolFlagProperty{
-				description:        "Takes in a server certificate filename and optionally, its private key filename and/or its passphrase. Separated by spaces. The format is --server-cert server.crt [server.key [passphrase]]",
+				description:        "Takes in a server certificate filename and optionally, its unencrypted private key filename. Separated by spaces. The format is --server-cert server.crt [server.key]",
 				argumentCount:      1,
 				compatibleCommands: []string{"verify", "info"},
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
