@@ -201,8 +201,8 @@ func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certifi
 	if key, ok := privateKeys[serverCert.Label]; ok {
 		stepResult.Message = fmt.Sprintf("Verifying matching certificate and key:\t%s with %s\n", serverCert.Label, key.Label)
 
-		if pubKey, ok := serverCert.Certificate.PublicKey.(*rsa.PublicKey); ok {
-			if privateKey, ok := key.PrivateKey.(*rsa.PrivateKey); ok {
+		if pubKey, ok := serverCert.Certificate.PublicKey.(rsa.PublicKey); ok {
+			if privateKey, ok := key.PrivateKey.(rsa.PrivateKey); ok {
 
 				if pubKey.N.Cmp(privateKey.N) == 0 {
 					stepResult.Status = result.StatusSuccess
