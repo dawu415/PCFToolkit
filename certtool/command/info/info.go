@@ -37,7 +37,6 @@ func (cmd *Info) Name() string {
 
 // Execute performs the info command
 func (cmd *Info) Execute() result.Result {
-	var outputResult *Result
 	var trustChainMap = map[certificate.Certificate]CertificateTrustChains{}
 
 	if len(cmd.certRepo.ServerCerts) != 0 {
@@ -49,14 +48,12 @@ func (cmd *Info) Execute() result.Result {
 				Error:  err,
 			}
 		}
-
-		outputResult = &Result{
-			certificates: append(append(cmd.certRepo.ServerCerts, cmd.certRepo.IntermediateCerts...), cmd.certRepo.RootCACerts...),
-			trustChains:  trustChainMap,
-		}
-
 	}
-	return outputResult
+
+	return &Result{
+		certificates: append(append(cmd.certRepo.ServerCerts, cmd.certRepo.IntermediateCerts...), cmd.certRepo.RootCACerts...),
+		trustChains:  trustChainMap,
+	}
 }
 
 func (cmd *Info) buildCertificateTrustChain(inputCert certificate.Certificate) ([][]certificate.Certificate, error) {

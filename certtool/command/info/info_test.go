@@ -7,11 +7,11 @@ import (
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository"
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 
-	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate/mocks"
-	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/fileIO/mocks"
-	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey/mocks"
+	certificate_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate/mocks"
+	fileIO_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/fileIO/mocks"
+	privatekey_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey/mocks"
 	"github.com/dawu415/PCFToolkit/certtool/command/info"
-	"github.com/dawu415/PCFToolkit/certtool/command/x509Lib/mocks"
+	x509libmock "github.com/dawu415/PCFToolkit/certtool/command/x509Lib/mocks"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -43,8 +43,12 @@ var _ = Describe("Info Command Test", func() {
 	})
 
 	Context("There are no server certs", func() {
-		It("should return nil", func() {
-			Expect(infoCommand.Execute()).Should(BeNil())
+		It("should return a set of certificates plus an empty trust chain map", func() {
+			result := infoCommand.Execute()
+			Expect(result).ShouldNot(BeNil())
+			certInfo := result.Data().(info.CertificateInfo)
+			Expect(certInfo.TrustChains).Should(BeEmpty())
+			Expect(certInfo.Certificates).ShouldNot(BeNil())
 		})
 	})
 	Context("There is a trust chain", func() {
