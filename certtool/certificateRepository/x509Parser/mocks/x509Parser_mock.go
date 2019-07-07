@@ -13,11 +13,13 @@ type X509ParseDataMock struct {
 	ParseCertificatesFailed bool
 	ParsePrivateKeyFailed   bool
 	CertificateType         int
+	SubjectCommonName       string
+	DNSNames                []string
 }
 
 // Newx509ParserMock instantiates an object for the x509ParserMock interface
 func Newx509ParserMock() *X509ParseDataMock {
-	return &X509ParseDataMock{}
+	return &X509ParseDataMock{SubjectCommonName: "*.dawu.org"}
 }
 
 // ParseCertificates parses an x509 certificate with byte input as asn.1
@@ -38,8 +40,10 @@ func (x *X509ParseDataMock) ParseCertificates(asn1Data []byte) ([]*x509.Certific
 		OrganizationalUnit: []string{"dawu authority Sub-Corp"},
 	}
 	pkixSubject := pkix.Name{
-		CommonName: "*.dawu.io",
+		CommonName: x.SubjectCommonName,
 	}
+
+	fakeCert.DNSNames = x.DNSNames
 
 	if x.CertificateType == certificate.TypeServerCertificate {
 		fakeCert.Subject = pkixSubject

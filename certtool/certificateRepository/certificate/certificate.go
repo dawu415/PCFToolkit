@@ -9,7 +9,7 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/pemDecoder"
-	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/x509Parser"
+	x509parser "github.com/dawu415/PCFToolkit/certtool/certificateRepository/x509Parser"
 )
 
 // Constants/Enums used to define a certificate type
@@ -97,7 +97,20 @@ func (cert *Certificate) determineCertificateType(certificate *x509.Certificate)
 
 func (cert *Certificate) isServerCert(input *x509.Certificate) bool {
 	return govalidator.IsURL(strings.Replace(input.Subject.CommonName, "*.", "", -1)) ||
-		govalidator.IsIP(input.Subject.CommonName)
+		govalidator.IsIP(input.Subject.CommonName) || cert.hasURLorIPSANS(input)
+}
+
+func (cert *Certificate) hasURLorIPSANS(input *x509.Certificate) bool {
+	var hasURLorIPSANS = false
+	if len(input.DNSNames) > 0 {
+		for _, dnsName := range input.DNSNames {
+			hasURLorIPSANS = govalidator.IsURL(strings.Replace(dnsName, "*.", "", -1)) || govalidator.IsIP(dnsName)
+			if hasURLorIPSANS == true {
+				break
+			}
+		}
+	}
+	return hasURLorIPSANS
 }
 
 func (cert *Certificate) isRootCert(input *x509.Certificate) bool {

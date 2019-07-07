@@ -57,7 +57,7 @@ var _ = Describe("Info Command Test", func() {
 			// Load the Mock Server Cert
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
-			certLoader.SubjectCN = "*.dawu.io"
+			certLoader.SubjectCN = "*.dawu.org"
 			certLoader.IssuerCN = "dawu Enterprise Root CA"
 
 			certRepo.InstallCertificates("MockServerCert.pem")
@@ -115,7 +115,7 @@ var _ = Describe("Info Command Test", func() {
 			// Load the Mock Server Cert
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
-			certLoader.SubjectCN = "*.dawu.io"
+			certLoader.SubjectCN = "*.dawu.org"
 			certLoader.IssuerCN = "DAWU ROOT X5"
 
 			certRepo.InstallCertificates("MockServerCert.pem")
@@ -151,7 +151,7 @@ var _ = Describe("Info Command Test", func() {
 			// Load the Mock Server Cert
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
-			certLoader.SubjectCN = "*.dawu.io"
+			certLoader.SubjectCN = "*.dawu.org"
 			certLoader.IssuerCN = "dawu Enterprise X3 authority"
 
 			certRepo.InstallCertificates("MockServerCert.pem")
@@ -191,7 +191,7 @@ var _ = Describe("Info Command Test", func() {
 			// Load the Mock Server Cert
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
-			certLoader.SubjectCN = "*.dawu.io"
+			certLoader.SubjectCN = "*.dawu.org"
 			certLoader.IssuerCN = "dawu Enterprise X3 authority"
 
 			certRepo.InstallCertificates("MockServerCert.pem")
@@ -234,7 +234,7 @@ var _ = Describe("Info Command Test", func() {
 			// Load the Mock Server Cert
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
-			certLoader.SubjectCN = "*.dawu.io"
+			certLoader.SubjectCN = "*.dawu.org"
 			certLoader.IssuerCN = "dawu Enterprise X3 authority"
 
 			certRepo.InstallCertificates("MockServerCert.pem")
@@ -274,7 +274,7 @@ var _ = Describe("Info Command Test", func() {
 			// Load the Mock Server Cert
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
-			certLoader.SubjectCN = "*.dawu.io"
+			certLoader.SubjectCN = "*.dawu.org"
 			certLoader.IssuerCN = "dawu Enterprise X3 authority"
 
 			certRepo.InstallCertificates("MockServerCert.pem")
@@ -343,7 +343,7 @@ var _ = Describe("Info Command Test", func() {
 			// Load the Mock Server Cert
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
-			certLoader.SubjectCN = "*.dawu.io"
+			certLoader.SubjectCN = "*.dawu.org"
 			certLoader.IssuerCN = "dawu Enterprise X3 authority"
 
 			certRepo.InstallCertificates("MockServerCert.pem")
