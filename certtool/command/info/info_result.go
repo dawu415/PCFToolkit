@@ -49,6 +49,11 @@ func (result *Result) Out() {
 			cert.Certificate.Subject.CommonName,
 			strings.Join(cert.Certificate.DNSNames, ",\n\t\t "))
 		fmt.Print("\n")
+		//if cert.IsRootCert() {
+		//	fmt.Printf("\n\tCertificate:\n%s", string(*cert.PemBlock))
+		//}
+
+		var sb = strings.Builder{}
 
 		if trustChain, ok := result.trustChains[cert]; ok {
 			var certTreeRoot = treeprint.New()
@@ -69,9 +74,26 @@ func (result *Result) Out() {
 					if !chain[len(chain)-1].IsRootCert() {
 						node = node.AddBranch("INCOMPLETE CHAIN")
 					}
+
+					for _, cert = range chain {
+						if cert.Type == certificate.TypeServerCertificate ||
+							cert.Type == certificate.TypeSelfSignedServerCertificate {
+							sb.WriteString("Server Certificate:\n")
+						} else if cert.Type == certificate.TypeIntermediateCertificate {
+							sb.WriteString("Intermediate Certificate:\n")
+						} else {
+							sb.WriteString("Root CA Certificate:\n")
+						}
+
+						sb.WriteString(string(*cert.PemBlock))
+						sb.WriteString("\n\n")
+					}
 				}
 				fmt.Print("\nTrust Chain:\n")
 				fmt.Println(certTreeRoot.String())
+				fmt.Print("\nChained Certificates:\n")
+				fmt.Printf(sb.String())
+
 			} else {
 				fmt.Printf("Unable to print trust chain tree: %s", trustChain.Error.Error())
 			}

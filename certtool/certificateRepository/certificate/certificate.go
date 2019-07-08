@@ -30,6 +30,7 @@ type Certificate struct {
 	Type        int
 	Label       string
 	Certificate *x509.Certificate
+	PemBlock    *[]byte
 	pemDecoder  pemDecoder.PEMDecoderInterface
 	x509Parser  x509parser.X509ParserInterface
 }
@@ -54,24 +55,38 @@ func NewPEMCertificate() PEMCertificateLoaderInterface {
 // This method will decode each certificate in PEMCertBytes and return them as an array of Certificate
 func (cert *Certificate) LoadPEMCertificates(label string, PEMCertBytes []byte) ([]Certificate, error) {
 	var certificates []Certificate
-	var decodedCertsBytes []byte
 	var err error
-
-	decodedCertsBytes, err = cert.splitCertPEMBytes(PEMCertBytes)
-	if err == nil {
-		var x509Certs []*x509.Certificate
-		x509Certs, err = cert.x509Parser.ParseCertificates(decodedCertsBytes)
-		if err == nil {
-			for _, x509Cert := range x509Certs {
-				certificates = append(certificates,
-					Certificate{
-						Type:        cert.determineCertificateType(x509Cert),
-						Label:       label,
-						Certificate: x509Cert,
-					})
-			}
+	var certCount = 0
+	var startByteIdx = 0
+	remainder := PEMCertBytes
+	for len(remainder) > 0 {
+		var singlePEMCert *pem.Block
+		singlePEMCert, remainder = cert.pemDecoder.Decode(remainder)
+		decodedSinglePEMCertLen := len(PEMCertBytes) - len(remainder)
+		originalCertBytes := PEMCertBytes[startByteIdx:decodedSinglePEMCertLen]
+		startByteIdx = decodedSinglePEMCertLen
+		certCount++
+		if singlePEMCert == nil {
+			err = fmt.Errorf("Error: Cert PEM %d cannot be parsed", certCount)
+			break
 		}
 
+		if err == nil {
+			var x509Certs []*x509.Certificate
+			x509Certs, err = cert.x509Parser.ParseCertificates(singlePEMCert.Bytes)
+			if err == nil {
+				for _, x509Cert := range x509Certs {
+					certificates = append(certificates,
+						Certificate{
+							Type:        cert.determineCertificateType(x509Cert),
+							Label:       label,
+							Certificate: x509Cert,
+							PemBlock:    &originalCertBytes,
+						})
+				}
+			}
+
+		}
 	}
 
 	return certificates, err
@@ -122,23 +137,4 @@ func (cert *Certificate) isRootCert(input *x509.Certificate) bool {
 	// For simplicity, we'll use the test that checks that the issuer and subject are identical
 	// See http://www.ietf.org/rfc/rfc5280.txt for more information regarding root certificate identification
 	return reflect.DeepEqual(input.Issuer, input.Subject)
-}
-
-// splitCert takes in a concatenated set of PEM certs and splits them out
-// as a byte array of cert PEM blocks that can be used with the crypto/x509 Library
-func (cert *Certificate) splitCertPEMBytes(concatenatedPEMCerts []byte) ([]byte, error) {
-	var blocks = []byte{}
-	var err error
-	remainder := concatenatedPEMCerts
-	for len(remainder) > 0 {
-		var singlePEMCert *pem.Block
-		singlePEMCert, remainder = cert.pemDecoder.Decode(remainder)
-		if singlePEMCert == nil {
-			err = fmt.Errorf("PEM Bytes Split - Error: PEM not parsed")
-			break
-		}
-		blocks = append(blocks, singlePEMCert.Bytes...)
-
-	}
-	return blocks, err
 }
