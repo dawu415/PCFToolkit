@@ -49,9 +49,9 @@ func (result *Result) Out() {
 			cert.Certificate.Subject.CommonName,
 			strings.Join(cert.Certificate.DNSNames, ",\n\t\t "))
 		fmt.Print("\n")
-		//if cert.IsRootCert() {
-		//	fmt.Printf("\n\tCertificate:\n%s", string(*cert.PemBlock))
-		//}
+		if cert.IsRootCert() {
+			fmt.Printf("\n\tRoot CA Certificate:\n\n%s\n\n", string(*cert.PemBlock))
+		}
 
 		var sb = strings.Builder{}
 
@@ -78,11 +78,11 @@ func (result *Result) Out() {
 					for _, cert = range chain {
 						if cert.Type == certificate.TypeServerCertificate ||
 							cert.Type == certificate.TypeSelfSignedServerCertificate {
-							sb.WriteString("Server Certificate:\n")
+							sb.WriteString("Server Certificate:\n\n")
 						} else if cert.Type == certificate.TypeIntermediateCertificate {
-							sb.WriteString("Intermediate Certificate:\n")
+							sb.WriteString("Intermediate Certificate:\n\n")
 						} else {
-							sb.WriteString("Root CA Certificate:\n")
+							sb.WriteString("Root CA Certificate:\n\n")
 						}
 
 						sb.WriteString(string(*cert.PemBlock))
@@ -91,7 +91,7 @@ func (result *Result) Out() {
 				}
 				fmt.Print("\nTrust Chain:\n")
 				fmt.Println(certTreeRoot.String())
-				fmt.Print("\nChained Certificates:\n")
+				fmt.Print("\nChained Certificates:\n\n")
 				fmt.Printf(sb.String())
 
 			} else {
