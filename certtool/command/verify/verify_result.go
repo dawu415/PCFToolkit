@@ -20,10 +20,11 @@ type Result struct {
 
 // ResultData holds the output results of the verify steps
 type ResultData struct {
-	Title       string
-	Source      int
-	StepResults []StepResultData
-	Error       error
+	Title            string
+	Source           int
+	StepResults      []StepResultData
+	OverallSucceeded bool
+	Error            error
 }
 
 // StepResultData holds the detailed output results of a verify steps
@@ -58,4 +59,17 @@ func (result *Result) Out() {
 // Data returns the raw data of Result
 func (result *Result) Data() interface{} {
 	return result.results
+}
+
+// Status returns the overall status of the results. It takes on a worst case approach, where any failures is a failed state.
+// For untested results, it is considered a success.
+func (result *Result) Status() bool {
+	for _, resultSet := range result.results {
+		for _, result := range resultSet {
+			if result.OverallSucceeded == false {
+				return false
+			}
+		}
+	}
+	return true
 }

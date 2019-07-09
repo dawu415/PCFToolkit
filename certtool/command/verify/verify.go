@@ -66,8 +66,20 @@ func (cmd *Verify) Execute() result.Result {
 			results[idx] = append(results[idx], cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts))
 		} else {
 			// Otherwise, test both the provided root CA certs and the system store.
-			results[idx] = append(results[idx], cmd.stepCheckCertificateTrustChain(serverCert, !useSystemRootCerts))
-			results[idx] = append(results[idx], cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts))
+			resultUsingProvidedRootCA := cmd.stepCheckCertificateTrustChain(serverCert, !useSystemRootCerts)
+			resultUsingSystemRootCA := cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts)
+
+			// We should update the overall success here to be true, if any of them succeeded because it means it found
+			// a trust chain.
+			if resultUsingProvidedRootCA.OverallSucceeded == true ||
+				resultUsingSystemRootCA.OverallSucceeded == true {
+				resultUsingProvidedRootCA.OverallSucceeded = true
+				resultUsingSystemRootCA.OverallSucceeded = true
+			}
+
+			results[idx] = append(results[idx], resultUsingProvidedRootCA)
+			results[idx] = append(results[idx], resultUsingSystemRootCA)
+
 		}
 
 		results[idx] = append(results[idx], cmd.stepCheckCertificateDomainsForPCF(serverCert))
@@ -107,10 +119,11 @@ func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certifi
 	}
 
 	return ResultData{
-		Source:      SourceVerifyTrustChain,
-		Title:       fmt.Sprintf("Verifying Certificate Trust Chain %s", rootCertMessage),
-		StepResults: []StepResultData{verifyStepResult},
-		Error:       nil,
+		Source:           SourceVerifyTrustChain,
+		Title:            fmt.Sprintf("Verifying Certificate Trust Chain %s", rootCertMessage),
+		StepResults:      []StepResultData{verifyStepResult},
+		OverallSucceeded: verifyStepResult.Status == result.StatusSuccess,
+		Error:            nil,
 	}
 }
 
@@ -127,6 +140,7 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 		"*.login." + cmd.systemDomain + ".",
 	}
 
+	var overralResult = true
 	var resultsArray []StepResultData
 	for _, dnsName := range DNSNames {
 		var found = false
@@ -145,6 +159,7 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 			stepResult.Status = result.StatusSuccess
 			stepResult.StatusMessage = "FOUND!"
 		} else {
+			overralResult = false
 			stepResult.Status = result.StatusFailed
 			stepResult.StatusMessage = "X"
 		}
@@ -152,10 +167,11 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 
 	}
 	return ResultData{
-		Source:      SourceVerifyCertSANS,
-		Title:       "Checking PCF SANs on Certificate",
-		StepResults: resultsArray,
-		Error:       nil,
+		Source:           SourceVerifyCertSANS,
+		Title:            "Checking PCF SANs on Certificate",
+		StepResults:      resultsArray,
+		OverallSucceeded: overralResult,
+		Error:            nil,
 	}
 }
 
@@ -184,10 +200,11 @@ func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate
 	}
 
 	return ResultData{
-		Source:      SourceVerifyCertExpiry,
-		Title:       "Checking Certificate Expiry",
-		StepResults: []StepResultData{stepResult},
-		Error:       nil,
+		Source:           SourceVerifyCertExpiry,
+		Title:            "Checking Certificate Expiry",
+		StepResults:      []StepResultData{stepResult},
+		OverallSucceeded: stepResult.Status == result.StatusSuccess,
+		Error:            nil,
 	}
 }
 
@@ -229,9 +246,10 @@ func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certifi
 	}
 
 	return ResultData{
-		Source:      SourceVerifyCertPrivateKeyMatch,
-		Title:       "Checking the certificate and private key match",
-		StepResults: []StepResultData{stepResult},
-		Error:       err,
+		Source:           SourceVerifyCertPrivateKeyMatch,
+		Title:            "Checking the certificate and private key match",
+		StepResults:      []StepResultData{stepResult},
+		OverallSucceeded: stepResult.Status == result.StatusSuccess || stepResult.Status == result.StatusNotChecked,
+		Error:            err,
 	}
 }

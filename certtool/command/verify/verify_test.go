@@ -8,12 +8,12 @@ import (
 
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository"
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
-	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate/mocks"
-	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/fileIO/mocks"
-	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey/mocks"
+	certificate_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate/mocks"
+	fileIO_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/fileIO/mocks"
+	privatekey_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey/mocks"
 	"github.com/dawu415/PCFToolkit/certtool/command/result"
 	"github.com/dawu415/PCFToolkit/certtool/command/verify"
-	"github.com/dawu415/PCFToolkit/certtool/command/x509Lib/mocks"
+	x509libmock "github.com/dawu415/PCFToolkit/certtool/command/x509Lib/mocks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -100,7 +100,8 @@ var _ = Describe("Verify Command Test", func() {
 		})
 		It("should still run when TrustChain exists", func() {
 			mockVerifyLib.TrustChainExist = true
-			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
+			cmdResult := verifyCommand.Execute()
+			verifyResult, ok := cmdResult.Data().([][]verify.ResultData)
 
 			Expect(ok).To(BeTrue())
 			Expect(certRepo.RootCACerts).Should(HaveLen(0))
@@ -114,11 +115,16 @@ var _ = Describe("Verify Command Test", func() {
 					Expect(stepResult.Status).To(Equal(result.StatusSuccess))
 				}
 			}
+
+			// System Root certs are used instead, our fake cert issuer is not in the system store.
+			Expect(cmdResult.Status()).To(BeFalse())
 		})
 
 		It("should still run when TrustChain does not exist", func() {
 			mockVerifyLib.TrustChainExist = false
-			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
+
+			cmdResult := verifyCommand.Execute()
+			verifyResult, ok := cmdResult.Data().([][]verify.ResultData)
 
 			Expect(ok).To(BeTrue())
 			Expect(certRepo.RootCACerts).Should(HaveLen(0))
@@ -132,6 +138,8 @@ var _ = Describe("Verify Command Test", func() {
 					Expect(stepResult.Status).To(Equal(result.StatusFailed))
 				}
 			}
+
+			Expect(cmdResult.Status()).To(BeFalse())
 		})
 	})
 
@@ -152,7 +160,8 @@ var _ = Describe("Verify Command Test", func() {
 		})
 		It("should still run when TrustChain exists", func() {
 			mockVerifyLib.TrustChainExist = true
-			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
+			cmdResult := verifyCommand.Execute()
+			verifyResult, ok := cmdResult.Data().([][]verify.ResultData)
 
 			Expect(ok).To(BeTrue())
 
@@ -340,6 +349,7 @@ var _ = Describe("Verify Command Test", func() {
 
 			Expect(filteredResults[0].Error).ToNot(BeNil())
 			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
+
 		})
 		It("should fail if private key has invalid interface", func() {
 			// By default, the private key of keyload is empty

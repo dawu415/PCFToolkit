@@ -108,3 +108,8 @@ func (result *Result) Out() {
 func (result *Result) Data() interface{} {
 	return CertificateInfo{Certificates: result.certificates, TrustChains: result.trustChains}
 }
+
+// Status always returns true the for the Info command
+func (result *Result) Status() bool {
+	return true
+}

@@ -15,4 +15,5 @@ const (
 type Result interface {
 	Out()
 	Data() interface{}
+	Status() bool
 }
