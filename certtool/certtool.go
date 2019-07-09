@@ -61,7 +61,7 @@ func main() {
 	var cmd command.Command
 	switch cta.CommandName {
 	case "verify":
-		cmd = command.CreateVerifyCommand(certRepo, cta.SystemDomain, cta.AppsDomain)
+		cmd = command.CreateVerifyCommand(certRepo, cta.SystemDomain, cta.AppsDomain, cta.VerifyTrustChain, cta.VerifyDNS, cta.VerifyCertExpiration, cta.VerifyCertPrivateKeyMatch)
 	case "decrypt":
 	case "info":
 		cmd = command.CreateInfoCommand(certRepo)
@@ -69,13 +69,20 @@ func main() {
 		fmt.Println("ERROR: Unknown Command Name - ", cta.CommandName)
 	}
 
+	var returnResult = 1
+
 	if cmd != nil {
 		results := cmd.Execute()
 		if results != nil {
 			results.Out()
+
+			if results.Status() == true {
+				returnResult = 0
+			}
 		}
 	} else {
 		fmt.Printf("ERROR: Problem encountered when running the %s command. Unable to create the command.\n", cta.CommandName)
 	}
 
+	os.Exit(returnResult)
 }

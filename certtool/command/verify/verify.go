@@ -18,29 +18,63 @@ import (
 
 // Verify defines the struct holding the data necessary to execute a command
 type Verify struct {
-	certRepo      *certificateRepository.CertificateRepository
-	systemDomain  string
-	appsDomain    string
-	x509VerifyLib x509Lib.Interface
+	certRepo                  *certificateRepository.CertificateRepository
+	systemDomain              string
+	appsDomain                string
+	verifyTrustChain          bool
+	verifyDNS                 bool
+	verifyCertExpiration      bool
+	verifyCertPrivateKeyMatch bool
+	x509VerifyLib             x509Lib.Interface
 }
 
 // NewVerifyCommand creates a new verify command with a given certificate respository, system domain and app domain
-func NewVerifyCommand(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string) *Verify {
+func NewVerifyCommand(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch bool) *Verify {
+	// If all verification steps are false (it wasn't specified by user) then show all the verify steps
+	if verifyTrustChain == false &&
+		verifyDNS == false &&
+		verifyCertPrivateKeyMatch == false &&
+		verifyCertExpiration == false {
+		verifyTrustChain = true
+		verifyDNS = true
+		verifyCertPrivateKeyMatch = true
+		verifyCertExpiration = true
+	}
+
 	return &Verify{
-		certRepo:      certRepo,
-		systemDomain:  systemDoman,
-		appsDomain:    appDomain,
-		x509VerifyLib: x509Lib.NewX509Lib(),
+		certRepo:                  certRepo,
+		systemDomain:              systemDoman,
+		appsDomain:                appDomain,
+		verifyTrustChain:          verifyTrustChain,
+		verifyDNS:                 verifyDNS,
+		verifyCertExpiration:      verifyCertExpiration,
+		verifyCertPrivateKeyMatch: verifyCertPrivateKeyMatch,
+		x509VerifyLib:             x509Lib.NewX509Lib(),
 	}
 }
 
 // NewVerifyCommandCustomVerifyLib returns a verify command with given certificate repository, system domain, app domain and an x509VerifyLib
-func NewVerifyCommandCustomVerifyLib(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string, verifyLib x509Lib.Interface) *Verify {
+func NewVerifyCommandCustomVerifyLib(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch bool, verifyLib x509Lib.Interface) *Verify {
+	// If all verification steps are false (it wasn't specified by user) then show all the verify steps
+	if verifyTrustChain == false &&
+		verifyDNS == false &&
+		verifyCertPrivateKeyMatch == false &&
+		verifyCertExpiration == false {
+		verifyTrustChain = true
+		verifyDNS = true
+		verifyCertPrivateKeyMatch = true
+		verifyCertExpiration = true
+	}
+
 	return &Verify{
-		certRepo:      certRepo,
-		systemDomain:  systemDoman,
-		appsDomain:    appDomain,
-		x509VerifyLib: verifyLib,
+		certRepo:                  certRepo,
+		systemDomain:              systemDoman,
+		appsDomain:                appDomain,
+		verifyTrustChain:          verifyTrustChain,
+		verifyDNS:                 verifyDNS,
+		verifyCertExpiration:      verifyCertExpiration,
+		verifyCertPrivateKeyMatch: verifyCertPrivateKeyMatch,
+		x509VerifyLib:             verifyLib,
 	}
 }
 
@@ -60,31 +94,42 @@ func (cmd *Verify) Execute() result.Result {
 		results = make([][]ResultData, serverCertCount)
 	}
 	for idx, serverCert := range cmd.certRepo.ServerCerts {
-		// Check if the user provided the root CA certs.
-		if len(cmd.certRepo.RootCACerts) == 0 {
-			// If not, we should use the system CA cert store.
-			results[idx] = append(results[idx], cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts))
-		} else {
-			// Otherwise, test both the provided root CA certs and the system store.
-			resultUsingProvidedRootCA := cmd.stepCheckCertificateTrustChain(serverCert, !useSystemRootCerts)
-			resultUsingSystemRootCA := cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts)
 
-			// We should update the overall success here to be true, if any of them succeeded because it means it found
-			// a trust chain.
-			if resultUsingProvidedRootCA.OverallSucceeded == true ||
-				resultUsingSystemRootCA.OverallSucceeded == true {
-				resultUsingProvidedRootCA.OverallSucceeded = true
-				resultUsingSystemRootCA.OverallSucceeded = true
+		if cmd.verifyTrustChain {
+			// Check if the user provided the root CA certs.
+			if len(cmd.certRepo.RootCACerts) == 0 {
+				cmdResult := cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts)
+				// If not, we should use the system CA cert store.
+				results[idx] = append(results[idx], cmdResult)
+			} else {
+				// Otherwise, test both the provided root CA certs and the system store.
+				resultUsingProvidedRootCA := cmd.stepCheckCertificateTrustChain(serverCert, !useSystemRootCerts)
+				resultUsingSystemRootCA := cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts)
+
+				// We should update the overall success here to be true, if any of them succeeded because it means it found
+				// a trust chain.
+				if resultUsingProvidedRootCA.OverallSucceeded == true ||
+					resultUsingSystemRootCA.OverallSucceeded == true {
+					resultUsingProvidedRootCA.OverallSucceeded = true
+					resultUsingSystemRootCA.OverallSucceeded = true
+				}
+
+				results[idx] = append(results[idx], resultUsingProvidedRootCA)
+				results[idx] = append(results[idx], resultUsingSystemRootCA)
+
 			}
-
-			results[idx] = append(results[idx], resultUsingProvidedRootCA)
-			results[idx] = append(results[idx], resultUsingSystemRootCA)
-
+		}
+		if cmd.verifyDNS {
+			results[idx] = append(results[idx], cmd.stepCheckCertificateDomainsForPCF(serverCert))
 		}
 
-		results[idx] = append(results[idx], cmd.stepCheckCertificateDomainsForPCF(serverCert))
-		results[idx] = append(results[idx], cmd.stepCheckCertificateExpiry(serverCert))
-		results[idx] = append(results[idx], cmd.stepCheckCertificateWithProvidedPrivateKey(serverCert, cmd.certRepo.PrivateKeys))
+		if cmd.verifyCertExpiration {
+			results[idx] = append(results[idx], cmd.stepCheckCertificateExpiry(serverCert))
+		}
+
+		if cmd.verifyCertPrivateKeyMatch {
+			results[idx] = append(results[idx], cmd.stepCheckCertificateWithProvidedPrivateKey(serverCert, cmd.certRepo.PrivateKeys))
+		}
 	}
 	return &Result{
 		results: results,

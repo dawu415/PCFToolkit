@@ -51,11 +51,11 @@ var _ = Describe("Verify Command Test", func() {
 
 		systemDomain = "sys"
 		appDomain = "apps"
-		verifyCommand = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, mockVerifyLib)
+		verifyCommand = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, false, false, false, false, mockVerifyLib)
 	})
 
 	It("should return a verify command object", func() {
-		verifyCmd := verify.NewVerifyCommand(certRepo, "testsys", "testapp")
+		verifyCmd := verify.NewVerifyCommand(certRepo, "testsys", "testapp", false, false, false, false)
 		Expect(verifyCmd).ShouldNot(BeNil())
 	})
 
@@ -88,6 +88,129 @@ var _ = Describe("Verify Command Test", func() {
 		Expect(verifyResult).Should(HaveLen(2))
 	})
 
+	Context("No RootCA was provided and we specified the verifycmd to only do a single cert verification", func() {
+		var verifyCmd *verify.Verify
+		BeforeEach(func() {
+			fileIOMock.FileContent = "ABCD"
+			fileIOMock.OpenAndReadFailed = false
+
+			certLoader.CertificateType = certificate.TypeServerCertificate
+			certLoader.LoadPEMCertificateFailed = false
+
+		})
+		It("should still run when TrustChain exists", func() {
+
+			certRepo.InstallCertificates("somefile1AAAA.pem")
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, mockVerifyLib)
+
+			mockVerifyLib.TrustChainExist = true
+			cmdResult := verifyCmd.Execute()
+			verifyResult, ok := cmdResult.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(certRepo.RootCACerts).Should(HaveLen(0))
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
+			Expect(filteredResults).ToNot(BeNil())
+
+			for _, verifyResult := range filteredResults {
+				for _, stepResult := range verifyResult.StepResults {
+					Expect(stepResult.Status).To(Equal(result.StatusSuccess))
+				}
+			}
+
+			Expect(cmdResult.Status()).To(BeTrue())
+		})
+
+		It("should still run when TrustChain does not exist", func() {
+			mockVerifyLib.TrustChainExist = false
+			certRepo.InstallCertificates("somefile1BBBBBB.pem")
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, mockVerifyLib)
+
+			cmdResult := verifyCmd.Execute()
+			verifyResult, ok := cmdResult.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(certRepo.RootCACerts).Should(HaveLen(0))
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
+			Expect(filteredResults).ToNot(BeNil())
+
+			for _, verifyResult := range filteredResults {
+				for _, stepResult := range verifyResult.StepResults {
+					Expect(stepResult.Status).To(Equal(result.StatusFailed))
+				}
+			}
+
+			Expect(cmdResult.Status()).To(BeFalse())
+		})
+	})
+
+	Context("RootCA was provided", func() {
+		var verifyCmd *verify.Verify
+		BeforeEach(func() {
+			fileIOMock.FileContent = "ABCD"
+			fileIOMock.OpenAndReadFailed = false
+
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, mockVerifyLib)
+
+			certLoader.CertificateType = certificate.TypeServerCertificate
+			certLoader.LoadPEMCertificateFailed = false
+
+			certRepo.InstallCertificates("somefile1.pem")
+
+			certLoader.CertificateType = certificate.TypeRootCACertificate
+			certLoader.LoadPEMCertificateFailed = false
+
+			certRepo.InstallCertificates("root.pem")
+		})
+		It("should still run when TrustChain exists", func() {
+			mockVerifyLib.TrustChainExist = true
+			cmdResult := verifyCmd.Execute()
+			verifyResult, ok := cmdResult.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+
+			Expect(certRepo.RootCACerts).Should(HaveLen(1))
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
+			Expect(filteredResults).ToNot(BeNil())
+
+			for _, verifyResult := range filteredResults {
+				for _, stepResult := range verifyResult.StepResults {
+					Expect(stepResult.Status).To(Equal(result.StatusSuccess))
+				}
+			}
+			Expect(cmdResult.Status()).To(BeTrue())
+		})
+
+		It("should still run when TrustChain does not exist", func() {
+			mockVerifyLib.TrustChainExist = false
+			cmdResult := verifyCmd.Execute()
+			verifyResult, ok := cmdResult.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(certRepo.RootCACerts).Should(HaveLen(1))
+
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
+			Expect(filteredResults).ToNot(BeNil())
+
+			for _, verifyResult := range filteredResults {
+				for _, stepResult := range verifyResult.StepResults {
+					Expect(stepResult.Status).To(Equal(result.StatusFailed))
+				}
+			}
+
+			Expect(cmdResult.Status()).To(BeFalse())
+		})
+	})
+
+	/////
 	Context("No RootCA was provided", func() {
 		BeforeEach(func() {
 			fileIOMock.FileContent = "ABCD"
@@ -116,7 +239,6 @@ var _ = Describe("Verify Command Test", func() {
 				}
 			}
 
-			// System Root certs are used instead, our fake cert issuer is not in the system store.
 			Expect(cmdResult.Status()).To(BeFalse())
 		})
 
@@ -209,6 +331,41 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.DNSNames = SANsInCert
 			certRepo.InstallCertificates("somefile1.pem")
 		})
+
+		It("should run when only the VerifyDNS option is enabled and have an overall result of false because of incomplete SAN data", func() {
+			certLoader.DNSNames = SANsInCert
+			certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, keyLoader)
+			certRepo.InstallCertificates("somefile1.pem")
+			verifyCmd := verify.NewVerifyCommand(certRepo, "sys", "apps", false, true, false, false)
+			verifyResult, ok := verifyCmd.Execute().Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertSANS)
+			Expect(len(verifyResult[0])).To(Equal(len(filteredResults)))
+			Expect(filteredResults).ToNot(BeNil())
+			Expect(filteredResults[0].OverallSucceeded).To(BeFalse())
+		})
+
+		It("should run when only the VerifyDNS option is enabled and have an overall result of true because of complete SAN data", func() {
+			certLoader.DNSNames = []string{"*.apps.wu.com", "*.sys.wu.com", "*.login.sys.wu.com", "*.uaa.sys.wu.com"}
+			certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, keyLoader)
+			certRepo.InstallCertificates("somefile1.pem")
+			verifyCmd := verify.NewVerifyCommand(certRepo, "sys", "apps", false, true, false, false)
+			verifyResult, ok := verifyCmd.Execute().Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertSANS)
+			Expect(len(verifyResult[0])).To(Equal(len(filteredResults)))
+			Expect(filteredResults).ToNot(BeNil())
+			Expect(filteredResults[0].OverallSucceeded).To(BeTrue())
+		})
+
 		It("should run and provide tests for each subdomain types", func() {
 			verifyResult, ok := verifyCommand.Execute().Data().([][]verify.ResultData)
 
@@ -238,6 +395,88 @@ var _ = Describe("Verify Command Test", func() {
 		})
 	})
 
+	Context("Test of Cert Expiry when specifying only VerifyCertExpiry option", func() {
+		var verifyCmd *verify.Verify
+		BeforeEach(func() {
+			fileIOMock.FileContent = "ABCD"
+			fileIOMock.OpenAndReadFailed = false
+
+			certLoader.CertificateType = certificate.TypeServerCertificate
+			certLoader.LoadPEMCertificateFailed = false
+
+			verifyCmd = verify.NewVerifyCommand(certRepo, "sys", "apps", false, false, true, false)
+
+		})
+
+		It("should fail if certificate is expired", func() {
+			certLoader.NotBefore = time.Now().AddDate(0, -6, 0)
+			certLoader.NotAfter = time.Now().AddDate(0, -2, 0) // Expired 2 months ago
+			certRepo.InstallCertificates("somefile1.pem")
+			verifyCmdOutput := verifyCmd.Execute()
+			verifyResult, ok := verifyCmdOutput.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertExpiry)
+			Expect(filteredResults).To(HaveLen(1))
+
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
+			Expect(verifyCmdOutput.Status()).To(BeFalse())
+		})
+
+		It("should fail if certificate is not valid yet", func() {
+			certLoader.NotBefore = time.Now().AddDate(0, 5, 0) // Valid 5 months from now.
+			certLoader.NotAfter = time.Now().AddDate(0, 10, 0)
+			certRepo.InstallCertificates("somefile1.pem")
+			verifyCmdOutput := verifyCmd.Execute()
+			verifyResult, ok := verifyCmdOutput.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertExpiry)
+			Expect(filteredResults).To(HaveLen(1))
+
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
+			Expect(verifyCmdOutput.Status()).To(BeFalse())
+		})
+
+		It("should warn if certificate has less than 6 months left", func() {
+			certLoader.NotBefore = time.Now()
+			certLoader.NotAfter = time.Now().AddDate(0, 6, 0)
+			certRepo.InstallCertificates("somefile1.pem")
+			verifyCmdOutput := verifyCmd.Execute()
+			verifyResult, ok := verifyCmdOutput.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertExpiry)
+			Expect(filteredResults).To(HaveLen(1))
+
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusWarning))
+			Expect(verifyCmdOutput.Status()).To(BeFalse())
+		})
+
+		It("should succeed if certificate has more than 6 months left", func() {
+			certLoader.NotBefore = time.Now()
+			certLoader.NotAfter = time.Now().AddDate(0, 7, 0)
+			certRepo.InstallCertificates("somefile1.pem")
+			verifyCmdOutput := verifyCmd.Execute()
+			verifyResult, ok := verifyCmdOutput.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertExpiry)
+			Expect(filteredResults).To(HaveLen(1))
+
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusSuccess))
+			Expect(verifyCmdOutput.Status()).To(BeTrue())
+		})
+	})
+
 	Context("Test of Cert Expiry", func() {
 		BeforeEach(func() {
 			fileIOMock.FileContent = "ABCD"
@@ -247,6 +486,7 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.LoadPEMCertificateFailed = false
 
 		})
+
 		It("should fail if certificate is expired", func() {
 			certLoader.NotBefore = time.Now().AddDate(0, -6, 0)
 			certLoader.NotAfter = time.Now().AddDate(0, -2, 0) // Expired 2 months ago
@@ -307,6 +547,119 @@ var _ = Describe("Verify Command Test", func() {
 
 			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusSuccess))
 		})
+	})
+
+	Context("Testing of Private Key and Certificate Match when using a single verify option", func() {
+		var verifyCmd *verify.Verify
+		BeforeEach(func() {
+			fileIOMock.FileContent = "ABCD"
+			fileIOMock.OpenAndReadFailed = false
+
+			certLoader.CertificateType = certificate.TypeServerCertificate
+			certLoader.LoadPEMCertificateFailed = false
+
+			verifyCmd = verify.NewVerifyCommand(certRepo, "sys", "apps", false, false, false, true)
+
+		})
+
+		It("should not check if private key was not provided", func() {
+			certRepo.InstallCertificates("somefile1.pem")
+
+			verifyCmdResult := verifyCmd.Execute()
+			verifyResult, ok := verifyCmdResult.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(certRepo.PrivateKeys).Should(HaveLen(0))
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertPrivateKeyMatch)
+			Expect(filteredResults).To(HaveLen(1))
+
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusNotChecked))
+			Expect(verifyCmdResult.Status()).To(BeTrue())
+		})
+
+		It("should fail if public key has invalid interface", func() {
+
+			// By default, the Certificate Mock has an empty PublicKey
+			certRepo.InstallCertificateWithPrivateKey("serverCert.crt", "private.key", "")
+			verifyCmdResult := verifyCmd.Execute()
+			verifyResult, ok := verifyCmdResult.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(certRepo.PrivateKeys).Should(HaveLen(1))
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertPrivateKeyMatch)
+			Expect(filteredResults).To(HaveLen(1))
+
+			Expect(filteredResults[0].Error).ToNot(BeNil())
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
+			Expect(verifyCmdResult.Status()).To(BeFalse())
+		})
+
+		It("should fail if private key has invalid interface", func() {
+			// By default, the private key of keyload is empty
+			certLoader.PublicKey = rsa.PublicKey{}
+			certRepo.InstallCertificateWithPrivateKey("serverCert.crt", "private.key", "")
+			verifyCmdResult := verifyCmd.Execute()
+			verifyResult, ok := verifyCmdResult.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(certRepo.PrivateKeys).Should(HaveLen(1))
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertPrivateKeyMatch)
+			Expect(filteredResults).To(HaveLen(1))
+
+			Expect(filteredResults[0].Error).ToNot(BeNil())
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
+			Expect(verifyCmdResult.Status()).To(BeFalse())
+
+		})
+		It("should be successful if private key and public key match", func() {
+			var publicKeyModulus = big.Int{}
+			publicKeyModulus.SetUint64(1024)
+			keyLoader.PrivateKey = rsa.PrivateKey{PublicKey: rsa.PublicKey{N: &publicKeyModulus}}
+			certLoader.PublicKey = rsa.PublicKey{N: &publicKeyModulus}
+			certRepo.InstallCertificateWithPrivateKey("serverCert.crt", "private.key", "")
+			verifyCmdResult := verifyCmd.Execute()
+			verifyResult, ok := verifyCmdResult.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(certRepo.PrivateKeys).Should(HaveLen(1))
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertPrivateKeyMatch)
+			Expect(filteredResults).To(HaveLen(1))
+
+			Expect(filteredResults[0].Error).To(BeNil())
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusSuccess))
+			Expect(verifyCmdResult.Status()).To(BeTrue())
+		})
+		It("should be fail if private key and public key don't match", func() {
+			var publicKeyModulus = big.Int{}
+			var privateKeyModulus = big.Int{}
+			publicKeyModulus.SetUint64(1024)
+			privateKeyModulus.SetUint64(2048)
+			keyLoader.PrivateKey = rsa.PrivateKey{PublicKey: rsa.PublicKey{N: &privateKeyModulus}}
+			certLoader.PublicKey = rsa.PublicKey{N: &publicKeyModulus}
+			certRepo.InstallCertificateWithPrivateKey("serverCert.crt", "private.key", "")
+			verifyCmdResult := verifyCmd.Execute()
+			verifyResult, ok := verifyCmdResult.Data().([][]verify.ResultData)
+
+			Expect(ok).To(BeTrue())
+			Expect(certRepo.PrivateKeys).Should(HaveLen(1))
+			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult[0]).ShouldNot(BeNil())
+			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyCertPrivateKeyMatch)
+			Expect(filteredResults).To(HaveLen(1))
+
+			Expect(filteredResults[0].Error).To(BeNil())
+			Expect(filteredResults[0].StepResults[0].Status).To(Equal(result.StatusFailed))
+			Expect(verifyCmdResult.Status()).To(BeFalse())
+		})
+
 	})
 
 	Context("Testing of Private Key and Certificate Match", func() {

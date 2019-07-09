@@ -38,15 +38,19 @@ type CertToolCertificateFileSet struct {
 
 // CertToolArguments holds the Processed input arguments
 type CertToolArguments struct {
-	programName           string
-	CommandName           string // Describes the Command that is to be run in the program.  Possible values:  verify, decrypt and info
-	RootCAFiles           []string
-	IntermediateCertFiles []string
-	ServerCertFiles       []CertToolCertificateFileSet
-	SystemDomain          string
-	AppsDomain            string
-	flags                 map[string]*certToolFlagProperty // Private variable
-	PrintHelp             bool
+	programName               string
+	CommandName               string // Describes the Command that is to be run in the program.  Possible values:  verify, decrypt and info
+	RootCAFiles               []string
+	IntermediateCertFiles     []string
+	ServerCertFiles           []CertToolCertificateFileSet
+	SystemDomain              string
+	AppsDomain                string
+	VerifyTrustChain          bool
+	VerifyDNS                 bool
+	VerifyCertExpiration      bool
+	VerifyCertPrivateKeyMatch bool
+	flags                     map[string]*certToolFlagProperty // Private variable
+	PrintHelp                 bool
 }
 
 // NewCertToolArguments returns an initialized certToolArguments struct
@@ -233,6 +237,62 @@ func NewCertToolArguments() *CertToolArguments {
 						}
 					} else {
 						*err = fmt.Errorf("%s does not support --sys-domain", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--verify-trust-chain": &certToolFlagProperty{
+				description:        "Runs the verify command only for determining the trust chain",
+				argumentCount:      0,
+				compatibleCommands: []string{"verify"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						cta.VerifyTrustChain = true
+					} else {
+						*err = fmt.Errorf("%s does not support --verify-trust-chain", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--verify-dns": &certToolFlagProperty{
+				description:        "Runs the verify command only for determining the DNS/SANs in Certificate",
+				argumentCount:      0,
+				compatibleCommands: []string{"verify"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						cta.VerifyDNS = true
+					} else {
+						*err = fmt.Errorf("%s does not support --verify-dns", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--verify-cert-expiration": &certToolFlagProperty{
+				description:        "Runs the verify command only for determing expiration (or within 6 months) of a Certificate",
+				argumentCount:      0,
+				compatibleCommands: []string{"verify"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						cta.VerifyCertExpiration = true
+					} else {
+						*err = fmt.Errorf("%s does not support --verify-trust-expiration", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--verify-cert-private-key-match": &certToolFlagProperty{
+				description:        "Runs the verify command only for determing whether a private key matches a Certificate",
+				argumentCount:      0,
+				compatibleCommands: []string{"verify"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						cta.VerifyCertPrivateKeyMatch = true
+					} else {
+						*err = fmt.Errorf("%s does not support --verify-cert-private-key-match", cta.CommandName)
 					}
 				},
 			},
