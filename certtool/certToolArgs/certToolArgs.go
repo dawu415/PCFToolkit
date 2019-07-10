@@ -58,7 +58,7 @@ type InfoOptions struct {
 // CertToolArguments holds the Processed input arguments
 type CertToolArguments struct {
 	programName           string
-	CommandName           string // Describes the Command that is to be run in the program.  Possible values:  verify, decrypt and info
+	CommandName           string // Describes the Command that is to be run in the program.
 	RootCAFiles           []string
 	IntermediateCertFiles []string
 	ServerCertFiles       []CertToolCertificateFileSet
