@@ -52,6 +52,7 @@ type InfoOptions struct {
 	FilterIntermediate      bool
 	FilterServerCertificate bool
 	HidePEMOutput           bool
+	ContainsFilter          string
 }
 
 // CertToolArguments holds the Processed input arguments
@@ -365,6 +366,28 @@ func NewCertToolArguments() *CertToolArguments {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
 						cta.InfoOptions.HidePEMOutput = true
+					} else {
+						*err = fmt.Errorf("%s does not support --info-hide-pem", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--name": &certToolFlagProperty{
+				description:        "Employs 'contains' string filtering on subject of certificate",
+				argumentCount:      1,
+				compatibleCommands: []string{"info"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						if (index + argCount) < len(args) {
+							if !strings.HasPrefix(args[index+1], "-") {
+								cta.InfoOptions.ContainsFilter = args[index+1]
+							} else {
+								*err = fmt.Errorf("No arguments provided for --name. Got %s instead", args[index+1])
+							}
+						} else {
+							*err = fmt.Errorf("No arguments provided for --name")
+						}
 					} else {
 						*err = fmt.Errorf("%s does not support --info-hide-pem", cta.CommandName)
 					}

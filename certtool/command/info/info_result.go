@@ -17,6 +17,7 @@ type Result struct {
 	filterIntermediate      bool
 	filterServerCertificate bool
 	hidePEMOutput           bool
+	containsFilter          string
 }
 
 // CertificateInfo holds the publicly accessible Certificates and Computed TrustChains
@@ -42,6 +43,13 @@ func (result *Result) Out() {
 	}
 
 	for _, cert := range result.certificates {
+
+		if len(result.containsFilter) > 0 {
+			if !strings.Contains(cert.Certificate.Subject.CommonName, result.containsFilter) &&
+				!strings.Contains(strings.Join(cert.Certificate.DNSNames, " "), result.containsFilter) {
+				continue
+			}
+		}
 
 		var outputCertInfo = false
 		if result.filterRootCA && cert.Type == certificate.TypeRootCACertificate ||

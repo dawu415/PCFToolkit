@@ -19,6 +19,6 @@ func CreateVerifyCommand(certRepo *certificateRepository.CertificateRepository, 
 }
 
 // CreateInfoCommand creates an Info Command
-func CreateInfoCommand(certRepo *certificateRepository.CertificateRepository, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput bool) Command {
-	return info.NewInfoCommand(certRepo, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput)
+func CreateInfoCommand(certRepo *certificateRepository.CertificateRepository, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput bool, containsFilter string) Command {
+	return info.NewInfoCommand(certRepo, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput, containsFilter)
 }

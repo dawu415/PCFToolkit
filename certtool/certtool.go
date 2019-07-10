@@ -64,7 +64,7 @@ func main() {
 		cmd = command.CreateVerifyCommand(certRepo, cta.VerifyOptions.SystemDomain, cta.VerifyOptions.AppsDomain, cta.VerifyOptions.VerifyTrustChain, cta.VerifyOptions.VerifyDNS, cta.VerifyOptions.VerifyCertExpiration, cta.VerifyOptions.VerifyCertPrivateKeyMatch)
 	case "decrypt":
 	case "info":
-		cmd = command.CreateInfoCommand(certRepo, cta.InfoOptions.FilterRootCA, cta.InfoOptions.FilterIntermediate, cta.InfoOptions.FilterServerCertificate, cta.InfoOptions.HidePEMOutput)
+		cmd = command.CreateInfoCommand(certRepo, cta.InfoOptions.FilterRootCA, cta.InfoOptions.FilterIntermediate, cta.InfoOptions.FilterServerCertificate, cta.InfoOptions.HidePEMOutput, cta.InfoOptions.ContainsFilter)
 	default:
 		fmt.Println("ERROR: Unknown Command Name - ", cta.CommandName)
 	}

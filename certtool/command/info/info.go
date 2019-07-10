@@ -16,10 +16,11 @@ type Info struct {
 	filterIntermediate      bool
 	filterServerCertificate bool
 	hidePEMOutput           bool
+	containsFilter          string
 }
 
 // NewInfoCommand creates a new info command with a given certificate respository
-func NewInfoCommand(certRepo *certificateRepository.CertificateRepository, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput bool) *Info {
+func NewInfoCommand(certRepo *certificateRepository.CertificateRepository, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput bool, containsFilter string) *Info {
 	// If no filtering option was selected, let's just make it all true, so that nothing is filtered out
 	if filterRootCA == false &&
 		filterIntermediate == false &&
@@ -35,11 +36,12 @@ func NewInfoCommand(certRepo *certificateRepository.CertificateRepository, filte
 		filterIntermediate:      filterIntermediate,
 		filterServerCertificate: filterServerCertificate,
 		hidePEMOutput:           hidePEMOutput,
+		containsFilter:          containsFilter,
 	}
 }
 
 // NewInfoCommandCustomX509Lib returns a info command with given certificate repository and an x509Lib
-func NewInfoCommandCustomX509Lib(certRepo *certificateRepository.CertificateRepository, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput bool, x509Lib x509Lib.Interface) *Info {
+func NewInfoCommandCustomX509Lib(certRepo *certificateRepository.CertificateRepository, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput bool, containsFilter string, x509Lib x509Lib.Interface) *Info {
 	// If no filtering option was selected, let's just make it all true, so that nothing is filtered out
 	if filterRootCA == false &&
 		filterIntermediate == false &&
@@ -55,6 +57,7 @@ func NewInfoCommandCustomX509Lib(certRepo *certificateRepository.CertificateRepo
 		filterIntermediate:      filterIntermediate,
 		filterServerCertificate: filterServerCertificate,
 		hidePEMOutput:           hidePEMOutput,
+		containsFilter:          containsFilter,
 	}
 }
 
@@ -91,6 +94,7 @@ func (cmd *Info) Execute() result.Result {
 		filterIntermediate:      cmd.filterIntermediate,
 		filterServerCertificate: cmd.filterServerCertificate,
 		hidePEMOutput:           cmd.hidePEMOutput,
+		containsFilter:          cmd.containsFilter,
 	}
 }
 
