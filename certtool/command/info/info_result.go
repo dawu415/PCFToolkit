@@ -85,8 +85,18 @@ func (result *Result) Out() {
 							sb.WriteString("Root CA Certificate:\n\n")
 						}
 
-						sb.WriteString(string(*cert.PemBlock))
-						sb.WriteString("\n\n")
+						// This caters for the case if the certificate was actually a system root certificate
+						// for which we are unable to extract
+						if cert.PemBlock != nil {
+							sb.WriteString(string(*cert.PemBlock))
+							sb.WriteString("\n\n")
+						} else {
+							if cert.Type == certificate.TypeRootCACertificate {
+								sb.WriteString("<System Root CAs are not extracted>\n\n")
+							} else {
+								sb.WriteString("Unable to extract certificate \n\n")
+							}
+						}
 					}
 				}
 				fmt.Print("\nTrust Chain:\n")
