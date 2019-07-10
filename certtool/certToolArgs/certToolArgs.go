@@ -373,7 +373,7 @@ func NewCertToolArguments() *CertToolArguments {
 			},
 			/////////////////////////////////////////////////
 			"--name": &certToolFlagProperty{
-				description:        "Employs 'contains' string filtering on subject of certificate",
+				description:        "Employs 'contains' string filtering on subject Common Name or SANs of certificate",
 				argumentCount:      1,
 				compatibleCommands: []string{"info"},
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
