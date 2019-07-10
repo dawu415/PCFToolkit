@@ -36,21 +36,35 @@ type CertToolCertificateFileSet struct {
 	ServerCertPrivateKeyPassphrase string
 }
 
-// CertToolArguments holds the Processed input arguments
-type CertToolArguments struct {
-	programName               string
-	CommandName               string // Describes the Command that is to be run in the program.  Possible values:  verify, decrypt and info
-	RootCAFiles               []string
-	IntermediateCertFiles     []string
-	ServerCertFiles           []CertToolCertificateFileSet
+// VerifyOptions hold the information for optional input flags for the Verify Commandå
+type VerifyOptions struct {
 	SystemDomain              string
 	AppsDomain                string
 	VerifyTrustChain          bool
 	VerifyDNS                 bool
 	VerifyCertExpiration      bool
 	VerifyCertPrivateKeyMatch bool
-	flags                     map[string]*certToolFlagProperty // Private variable
-	PrintHelp                 bool
+}
+
+// InfoOptions hold the information for optional input flags for the Info Commandå
+type InfoOptions struct {
+	FilterRootCA            bool
+	FilterIntermediate      bool
+	FilterServerCertificate bool
+	HidePEMOutput           bool
+}
+
+// CertToolArguments holds the Processed input arguments
+type CertToolArguments struct {
+	programName           string
+	CommandName           string // Describes the Command that is to be run in the program.  Possible values:  verify, decrypt and info
+	RootCAFiles           []string
+	IntermediateCertFiles []string
+	ServerCertFiles       []CertToolCertificateFileSet
+	VerifyOptions         VerifyOptions
+	InfoOptions           InfoOptions
+	flags                 map[string]*certToolFlagProperty // Private variable
+	PrintHelp             bool
 }
 
 // NewCertToolArguments returns an initialized certToolArguments struct
@@ -60,8 +74,12 @@ func NewCertToolArguments() *CertToolArguments {
 		RootCAFiles:           []string{},
 		IntermediateCertFiles: []string{},
 		ServerCertFiles:       []CertToolCertificateFileSet{},
-		SystemDomain:          "sys.",
-		AppsDomain:            "apps.",
+
+		VerifyOptions: VerifyOptions{
+			SystemDomain: "sys.",
+			AppsDomain:   "apps.",
+		},
+		InfoOptions: InfoOptions{},
 
 		flags: map[string]*certToolFlagProperty{
 			/////////////////////////////////////////////////
@@ -206,7 +224,7 @@ func NewCertToolArguments() *CertToolArguments {
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
 						if (index + argCount) < len(args) {
 							if !strings.HasPrefix(args[index+1], "-") {
-								cta.AppsDomain = args[index+1]
+								cta.VerifyOptions.AppsDomain = args[index+1]
 							} else {
 								*err = fmt.Errorf("No arguments provided for --apps-domain. Got %s instead", args[index+1])
 							}
@@ -228,7 +246,7 @@ func NewCertToolArguments() *CertToolArguments {
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
 						if (index + argCount) < len(args) {
 							if !strings.HasPrefix(args[index+1], "-") {
-								cta.SystemDomain = args[index+1]
+								cta.VerifyOptions.SystemDomain = args[index+1]
 							} else {
 								*err = fmt.Errorf("No arguments provided for --sys-domain. Got %s instead", args[index+1])
 							}
@@ -248,7 +266,7 @@ func NewCertToolArguments() *CertToolArguments {
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
-						cta.VerifyTrustChain = true
+						cta.VerifyOptions.VerifyTrustChain = true
 					} else {
 						*err = fmt.Errorf("%s does not support --verify-trust-chain", cta.CommandName)
 					}
@@ -262,7 +280,7 @@ func NewCertToolArguments() *CertToolArguments {
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
-						cta.VerifyDNS = true
+						cta.VerifyOptions.VerifyDNS = true
 					} else {
 						*err = fmt.Errorf("%s does not support --verify-dns", cta.CommandName)
 					}
@@ -276,7 +294,7 @@ func NewCertToolArguments() *CertToolArguments {
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
-						cta.VerifyCertExpiration = true
+						cta.VerifyOptions.VerifyCertExpiration = true
 					} else {
 						*err = fmt.Errorf("%s does not support --verify-trust-expiration", cta.CommandName)
 					}
@@ -290,9 +308,65 @@ func NewCertToolArguments() *CertToolArguments {
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
-						cta.VerifyCertPrivateKeyMatch = true
+						cta.VerifyOptions.VerifyCertPrivateKeyMatch = true
 					} else {
 						*err = fmt.Errorf("%s does not support --verify-cert-private-key-match", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--info-filter-root": &certToolFlagProperty{
+				description:        "Filter the info command output to show root CA certificates",
+				argumentCount:      0,
+				compatibleCommands: []string{"info"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						cta.InfoOptions.FilterRootCA = true
+					} else {
+						*err = fmt.Errorf("%s does not support --info-filter-root", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--info-filter-intermediate": &certToolFlagProperty{
+				description:        "Filter the info command output to show intermediate certificates",
+				argumentCount:      0,
+				compatibleCommands: []string{"info"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						cta.InfoOptions.FilterIntermediate = true
+					} else {
+						*err = fmt.Errorf("%s does not support --info-filter-intermediate", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--info-filter-server": &certToolFlagProperty{
+				description:        "Filter the info command output to show server certificates",
+				argumentCount:      0,
+				compatibleCommands: []string{"info"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						cta.InfoOptions.FilterServerCertificate = true
+					} else {
+						*err = fmt.Errorf("%s does not support --info-filter-server", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--info-hide-pem": &certToolFlagProperty{
+				description:        "Hide PEM blocks in the info command output",
+				argumentCount:      0,
+				compatibleCommands: []string{"info"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						cta.InfoOptions.HidePEMOutput = true
+					} else {
+						*err = fmt.Errorf("%s does not support --info-hide-pem", cta.CommandName)
 					}
 				},
 			},

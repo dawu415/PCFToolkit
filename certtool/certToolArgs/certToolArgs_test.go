@@ -163,7 +163,7 @@ var _ = Describe("certToolArgs", func() {
 		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--apps-domain", "appz"})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cta).ToNot(BeNil())
-		Expect(cta.AppsDomain).To(Equal("appz"))
+		Expect(cta.VerifyOptions.AppsDomain).To(Equal("appz"))
 	})
 
 	It("should failed with invalid input to --apps-domain ", func() {
@@ -183,7 +183,7 @@ var _ = Describe("certToolArgs", func() {
 		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--sys-domain", "system"})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cta).ToNot(BeNil())
-		Expect(cta.SystemDomain).To(Equal("system"))
+		Expect(cta.VerifyOptions.SystemDomain).To(Equal("system"))
 	})
 
 	It("should failed with invalid input to --sys-domain ", func() {

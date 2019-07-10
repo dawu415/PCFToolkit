@@ -35,7 +35,7 @@ var _ = Describe("Info Command Test", func() {
 		keyLoader = privatekey_mock.NewPrivateKeyMock()
 		certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, keyLoader)
 
-		infoCommand = info.NewInfoCommandCustomX509Lib(certRepo, mockx509Lib)
+		infoCommand = info.NewInfoCommandCustomX509Lib(certRepo, false, false, false, false, mockx509Lib)
 	})
 
 	It("should be called the info command", func() {

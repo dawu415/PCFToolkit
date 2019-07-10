@@ -11,8 +11,12 @@ import (
 
 // Result holds a set of results from the info command
 type Result struct {
-	certificates []certificate.Certificate
-	trustChains  map[certificate.Certificate]CertificateTrustChains
+	certificates            []certificate.Certificate
+	trustChains             map[certificate.Certificate]CertificateTrustChains
+	filterRootCA            bool
+	filterIntermediate      bool
+	filterServerCertificate bool
+	hidePEMOutput           bool
 }
 
 // CertificateInfo holds the publicly accessible Certificates and Computed TrustChains
@@ -38,6 +42,19 @@ func (result *Result) Out() {
 	}
 
 	for _, cert := range result.certificates {
+
+		var outputCertInfo = false
+		if result.filterRootCA && cert.Type == certificate.TypeRootCACertificate ||
+			result.filterIntermediate && cert.Type == certificate.TypeIntermediateCertificate ||
+			result.filterServerCertificate &&
+				(cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
+			outputCertInfo = true
+		}
+
+		if !outputCertInfo {
+			continue
+		}
+
 		fmt.Print("\n")
 		fmt.Println("---------------------------------------------------------------------")
 		fmt.Printf("Details of %s\n", cert.Label)
@@ -49,8 +66,10 @@ func (result *Result) Out() {
 			cert.Certificate.Subject.CommonName,
 			strings.Join(cert.Certificate.DNSNames, ",\n\t\t "))
 		fmt.Print("\n")
-		if cert.IsRootCert() {
-			fmt.Printf("\n\tRoot CA Certificate:\n\n%s\n\n", string(*cert.PemBlock))
+
+		// Top level result Root Certificates actually don't have a trust chain, so we'll have to print it here
+		if cert.IsRootCert() && !result.hidePEMOutput {
+			fmt.Printf("\n\tRoot CA Certificate - "+cert.Certificate.Subject.CommonName+":\n\n%s\n\n", string(*cert.PemBlock))
 		}
 
 		var sb = strings.Builder{}
@@ -74,36 +93,38 @@ func (result *Result) Out() {
 					if !chain[len(chain)-1].IsRootCert() {
 						node = node.AddBranch("INCOMPLETE CHAIN")
 					}
+					fmt.Print("\nTrust Chain:\n")
+					fmt.Println(certTreeRoot.String())
 
-					for _, cert = range chain {
-						if cert.Type == certificate.TypeServerCertificate ||
-							cert.Type == certificate.TypeSelfSignedServerCertificate {
-							sb.WriteString("Server Certificate:\n\n")
-						} else if cert.Type == certificate.TypeIntermediateCertificate {
-							sb.WriteString("Intermediate Certificate:\n\n")
-						} else {
-							sb.WriteString("Root CA Certificate:\n\n")
-						}
-
-						// This caters for the case if the certificate was actually a system root certificate
-						// for which we are unable to extract
-						if cert.PemBlock != nil {
-							sb.WriteString(string(*cert.PemBlock))
-							sb.WriteString("\n\n")
-						} else {
-							if cert.Type == certificate.TypeRootCACertificate {
-								sb.WriteString("<System Root CAs are not extracted>\n\n")
+					if !result.hidePEMOutput {
+						for _, cert = range chain {
+							if cert.Type == certificate.TypeServerCertificate ||
+								cert.Type == certificate.TypeSelfSignedServerCertificate {
+								sb.WriteString("Server Certificate - " + cert.Certificate.Subject.CommonName + ":\n\n")
+							} else if cert.Type == certificate.TypeIntermediateCertificate {
+								sb.WriteString("Intermediate Certificate - " + cert.Certificate.Subject.CommonName + ":\n\n")
 							} else {
-								sb.WriteString("Unable to extract certificate \n\n")
+								sb.WriteString("Root CA Certificate - " + cert.Certificate.Subject.CommonName + ":\n\n")
+							}
+
+							// This caters for the case if the certificate was actually a system root certificate
+							// for which we are unable to extract
+							if cert.PemBlock != nil {
+								sb.WriteString(string(*cert.PemBlock))
+								sb.WriteString("\n\n")
+							} else {
+								if cert.Type == certificate.TypeRootCACertificate {
+									sb.WriteString("<System Root CAs are not extracted>\n\n")
+								} else {
+									sb.WriteString("Unable to extract certificate \n\n")
+								}
 							}
 						}
+
+						fmt.Print("\nChained Certificates:\n\n")
+						fmt.Printf(sb.String())
 					}
 				}
-				fmt.Print("\nTrust Chain:\n")
-				fmt.Println(certTreeRoot.String())
-				fmt.Print("\nChained Certificates:\n\n")
-				fmt.Printf(sb.String())
-
 			} else {
 				fmt.Printf("Unable to print trust chain tree: %s", trustChain.Error.Error())
 			}

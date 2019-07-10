@@ -10,23 +10,51 @@ import (
 
 // Info defines the struct holding the data necessary to execute an info command
 type Info struct {
-	certRepo *certificateRepository.CertificateRepository
-	x509Lib  x509Lib.Interface
+	certRepo                *certificateRepository.CertificateRepository
+	x509Lib                 x509Lib.Interface
+	filterRootCA            bool
+	filterIntermediate      bool
+	filterServerCertificate bool
+	hidePEMOutput           bool
 }
 
 // NewInfoCommand creates a new info command with a given certificate respository
-func NewInfoCommand(certRepo *certificateRepository.CertificateRepository) *Info {
+func NewInfoCommand(certRepo *certificateRepository.CertificateRepository, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput bool) *Info {
+	// If no filtering option was selected, let's just make it all true, so that nothing is filtered out
+	if filterRootCA == false &&
+		filterIntermediate == false &&
+		filterServerCertificate == false {
+		filterRootCA = true
+		filterIntermediate = true
+		filterServerCertificate = true
+	}
 	return &Info{
-		certRepo: certRepo,
-		x509Lib:  x509Lib.NewX509Lib(),
+		certRepo:                certRepo,
+		x509Lib:                 x509Lib.NewX509Lib(),
+		filterRootCA:            filterRootCA,
+		filterIntermediate:      filterIntermediate,
+		filterServerCertificate: filterServerCertificate,
+		hidePEMOutput:           hidePEMOutput,
 	}
 }
 
 // NewInfoCommandCustomX509Lib returns a info command with given certificate repository and an x509Lib
-func NewInfoCommandCustomX509Lib(certRepo *certificateRepository.CertificateRepository, x509Lib x509Lib.Interface) *Info {
+func NewInfoCommandCustomX509Lib(certRepo *certificateRepository.CertificateRepository, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput bool, x509Lib x509Lib.Interface) *Info {
+	// If no filtering option was selected, let's just make it all true, so that nothing is filtered out
+	if filterRootCA == false &&
+		filterIntermediate == false &&
+		filterServerCertificate == false {
+		filterRootCA = true
+		filterIntermediate = true
+		filterServerCertificate = true
+	}
 	return &Info{
-		certRepo: certRepo,
-		x509Lib:  x509Lib,
+		certRepo:                certRepo,
+		x509Lib:                 x509Lib,
+		filterRootCA:            filterRootCA,
+		filterIntermediate:      filterIntermediate,
+		filterServerCertificate: filterServerCertificate,
+		hidePEMOutput:           hidePEMOutput,
 	}
 }
 
@@ -57,8 +85,12 @@ func (cmd *Info) Execute() result.Result {
 	}
 
 	return &Result{
-		certificates: append(append(cmd.certRepo.ServerCerts, cmd.certRepo.IntermediateCerts...), cmd.certRepo.RootCACerts...),
-		trustChains:  trustChainMap,
+		certificates:            append(append(cmd.certRepo.ServerCerts, cmd.certRepo.IntermediateCerts...), cmd.certRepo.RootCACerts...),
+		trustChains:             trustChainMap,
+		filterRootCA:            cmd.filterRootCA,
+		filterIntermediate:      cmd.filterIntermediate,
+		filterServerCertificate: cmd.filterServerCertificate,
+		hidePEMOutput:           cmd.hidePEMOutput,
 	}
 }
 
