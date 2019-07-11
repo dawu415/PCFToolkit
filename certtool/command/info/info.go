@@ -90,6 +90,7 @@ func (cmd *Info) Execute() result.Result {
 		if cmd.skipCert(intCert) {
 			continue
 		}
+
 		var trustChains, err = cmd.buildCertificateTrustChain(intCert)
 
 		trustChainMap[intCert] = CertificateTrustChains{
@@ -105,6 +106,7 @@ func (cmd *Info) Execute() result.Result {
 	}
 }
 
+// skipCert checks if a certificate should be skipped based on input filters provided by user input.
 func (cmd *Info) skipCert(cert certificate.Certificate) bool {
 	var skip = false
 	if len(cmd.containsFilter) > 0 {
