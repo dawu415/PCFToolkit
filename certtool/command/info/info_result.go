@@ -12,13 +12,9 @@ import (
 
 // Result holds a set of results from the info command
 type Result struct {
-	certificates            []certificate.Certificate
-	trustChains             map[certificate.Certificate]CertificateTrustChains
-	filterRootCA            bool
-	filterIntermediate      bool
-	filterServerCertificate bool
-	hidePEMOutput           bool
-	containsFilter          string
+	certificates  []certificate.Certificate
+	trustChains   map[certificate.Certificate]CertificateTrustChains
+	hidePEMOutput bool
 }
 
 // CertificateInfo holds the publicly accessible Certificates and Computed TrustChains
@@ -50,25 +46,6 @@ func (result *Result) Out() {
 	}
 
 	for _, cert := range result.certificates {
-
-		if len(result.containsFilter) > 0 {
-			if !strings.Contains(cert.Certificate.Subject.CommonName, result.containsFilter) &&
-				!strings.Contains(strings.Join(cert.Certificate.DNSNames, " "), result.containsFilter) {
-				continue
-			}
-		}
-
-		var outputCertInfo = false
-		if result.filterRootCA && cert.Type == certificate.TypeRootCACertificate ||
-			result.filterIntermediate && cert.Type == certificate.TypeIntermediateCertificate ||
-			result.filterServerCertificate &&
-				(cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
-			outputCertInfo = true
-		}
-
-		if !outputCertInfo {
-			continue
-		}
 
 		fmt.Print("\n")
 		fmt.Println("---------------------------------------------------------------------")

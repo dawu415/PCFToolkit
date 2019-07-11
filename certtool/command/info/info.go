@@ -99,13 +99,9 @@ func (cmd *Info) Execute() result.Result {
 	}
 
 	return &Result{
-		certificates:            append(append(cmd.certRepo.ServerCerts, cmd.certRepo.IntermediateCerts...), cmd.certRepo.RootCACerts...),
-		trustChains:             trustChainMap,
-		filterRootCA:            cmd.filterRootCA,
-		filterIntermediate:      cmd.filterIntermediate,
-		filterServerCertificate: cmd.filterServerCertificate,
-		hidePEMOutput:           cmd.hidePEMOutput,
-		containsFilter:          cmd.containsFilter,
+		certificates:  append(append(cmd.certRepo.ServerCerts, cmd.certRepo.IntermediateCerts...), cmd.certRepo.RootCACerts...),
+		trustChains:   trustChainMap,
+		hidePEMOutput: cmd.hidePEMOutput,
 	}
 }
 
