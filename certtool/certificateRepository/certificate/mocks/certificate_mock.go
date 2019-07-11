@@ -36,8 +36,9 @@ func (cert *CertificateMock) LoadPEMCertificates(label string, PEMCertBytes []by
 
 	return []certificate.Certificate{
 		certificate.Certificate{
-			Type:  cert.CertificateType,
-			Label: label,
+			Type:     cert.CertificateType,
+			Label:    label,
+			PemBlock: &[]byte{},
 			Certificate: &x509.Certificate{
 				Raw:       PEMCertBytes,
 				DNSNames:  cert.DNSNames,

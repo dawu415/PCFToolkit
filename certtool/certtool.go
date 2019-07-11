@@ -30,6 +30,14 @@ func main() {
 
 	certRepo := certificateRepository.NewCertificateRepository()
 
+	// Install the certificates from a YML file
+	for _, ymlFileInfo := range cta.CertificateYMLFiles {
+		if err := certRepo.InstallCertificatesFromYML(ymlFileInfo.YMLFilename, ymlFileInfo.YMLPath); err != nil {
+			fmt.Println("ERROR: ", err.Error())
+			return
+		}
+	}
+
 	// Install the Root certificates
 	for _, rootCertFilename := range cta.RootCAFiles {
 		if err := certRepo.InstallCertificates(rootCertFilename); err != nil {

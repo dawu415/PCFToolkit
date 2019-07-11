@@ -24,6 +24,7 @@ type ResultData struct {
 	Source           int
 	StepResults      []StepResultData
 	OverallSucceeded bool
+	Signature        string
 	Error            error
 }
 
@@ -38,8 +39,8 @@ type StepResultData struct {
 func (result *Result) Out() {
 	var results = result.results
 	// Print the result
-	for _, serverCertResult := range results {
-		for _, result := range serverCertResult {
+	for _, certResult := range results {
+		for _, result := range certResult {
 			if result.Error != nil {
 				fmt.Println("ERROR: Unable to execute Command - Verify - ", result.Error.Error())
 			} else {
@@ -51,6 +52,7 @@ func (result *Result) Out() {
 					fmt.Println("Task: ", step.Message)
 					fmt.Println("Status: ", step.StatusMessage)
 				}
+				fmt.Println("\nCert Signature: " + result.Signature)
 			}
 		}
 	}

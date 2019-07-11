@@ -4,6 +4,7 @@ import (
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/fileIO"
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey"
+	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/ymlparser"
 )
 
 // CertificateRepository defines a way to hold certificates and enable operations to be performed
@@ -14,6 +15,7 @@ type CertificateRepository struct {
 	ServerCerts       []certificate.Certificate
 	PrivateKeys       map[string]privatekey.PrivateKey
 	fileIO            fileIO.FileIOInterface
+	ymlParser         ymlparser.YMLParser
 	certificateLoader certificate.PEMCertificateLoaderInterface
 	privateKeyLoader  privatekey.PEMPrivateKeyLoaderInterface
 }
@@ -22,6 +24,7 @@ type CertificateRepository struct {
 func NewCustomCertificateRepository(
 	fio fileIO.FileIOInterface,
 	certLoader certificate.PEMCertificateLoaderInterface,
+	ymlParser ymlparser.YMLParser,
 	keyLoader privatekey.PEMPrivateKeyLoaderInterface) *CertificateRepository {
 
 	return &CertificateRepository{
@@ -30,6 +33,7 @@ func NewCustomCertificateRepository(
 		ServerCerts:       []certificate.Certificate{},
 		PrivateKeys:       map[string]privatekey.PrivateKey{},
 		fileIO:            fio,
+		ymlParser:         ymlParser,
 		certificateLoader: certLoader,
 		privateKeyLoader:  keyLoader,
 	}
@@ -43,6 +47,7 @@ func NewCertificateRepository() *CertificateRepository {
 		ServerCerts:       []certificate.Certificate{},
 		PrivateKeys:       map[string]privatekey.PrivateKey{},
 		fileIO:            fileIO.NewFileIO(),
+		ymlParser:         ymlparser.NewYMLParser(),
 		certificateLoader: certificate.NewPEMCertificate(),
 		privateKeyLoader:  privatekey.NewPrivateKey(),
 	}
@@ -69,6 +74,34 @@ func (repo *CertificateRepository) InstallCertificateWithPrivateKey(certFilename
 		}
 	}
 
+	return err
+}
+
+// InstallCertificatesFromYML inserts certificates into the current repo. from a yml field with a specific field
+func (repo *CertificateRepository) InstallCertificatesFromYML(certYMLFilename, ymlPath string) error {
+	var err error
+	var YMLBytes []byte
+	YMLBytes, err = repo.fileIO.OpenAndReadAll(certYMLFilename)
+
+	if err == nil {
+		var PEMCertBytes []byte
+		var certificates []certificate.Certificate
+		PEMCertBytes, err = repo.ymlParser.ParseContent(YMLBytes, ymlPath)
+		if err == nil {
+			certificates, err = repo.certificateLoader.LoadPEMCertificates(certYMLFilename+"--"+ymlPath, PEMCertBytes)
+			if err == nil {
+				for _, cert := range certificates {
+					if cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate {
+						repo.ServerCerts = append(repo.ServerCerts, cert)
+					} else if cert.Type == certificate.TypeRootCACertificate {
+						repo.RootCACerts = append(repo.RootCACerts, cert)
+					} else {
+						repo.IntermediateCerts = append(repo.IntermediateCerts, cert)
+					}
+				}
+			}
+		}
+	}
 	return err
 }
 

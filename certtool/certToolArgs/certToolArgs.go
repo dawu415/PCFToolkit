@@ -55,6 +55,12 @@ type InfoOptions struct {
 	ContainsFilter          string
 }
 
+// CertificateYMLFiles contains the path to the yml file and a string that holds the internal path to the certificate field
+type CertificateYMLFiles struct {
+	YMLFilename string
+	YMLPath     string
+}
+
 // CertToolArguments holds the Processed input arguments
 type CertToolArguments struct {
 	programName           string
@@ -64,6 +70,7 @@ type CertToolArguments struct {
 	ServerCertFiles       []CertToolCertificateFileSet
 	VerifyOptions         VerifyOptions
 	InfoOptions           InfoOptions
+	CertificateYMLFiles   []CertificateYMLFiles
 	flags                 map[string]*certToolFlagProperty // Private variable
 	PrintHelp             bool
 }
@@ -75,6 +82,7 @@ func NewCertToolArguments() *CertToolArguments {
 		RootCAFiles:           []string{},
 		IntermediateCertFiles: []string{},
 		ServerCertFiles:       []CertToolCertificateFileSet{},
+		CertificateYMLFiles:   []CertificateYMLFiles{},
 
 		VerifyOptions: VerifyOptions{
 			SystemDomain: "sys.",
@@ -151,6 +159,37 @@ func NewCertToolArguments() *CertToolArguments {
 							}
 						} else {
 							*err = fmt.Errorf("No arguments provided for --cert")
+						}
+					} else {
+						*err = fmt.Errorf("%s does not support --cert", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--cert-yml-field": &certToolFlagProperty{
+				description:        "Takes in a certificate yml filename and path to certificates. The format is --cert-yml-field <file.yml> </path/to/cert>",
+				argumentCount:      2,
+				compatibleCommands: []string{"verify", "info"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						if (index + argCount) < len(args) {
+							if !strings.HasPrefix(args[index+1], "-") {
+								filename := args[index+1]
+
+								var ymlPath string
+								if !strings.HasPrefix(args[index+2], "-") {
+									ymlPath = args[index+2]
+									cta.CertificateYMLFiles = append(cta.CertificateYMLFiles,
+										CertificateYMLFiles{YMLFilename: filename, YMLPath: ymlPath})
+								} else {
+									*err = fmt.Errorf("Invalid arguments provided for --cert-yml-field. Got %s instead", args[index+2])
+								}
+							} else {
+								*err = fmt.Errorf("No arguments provided for --cert-yml-field. Got %s instead", args[index+1])
+							}
+						} else {
+							*err = fmt.Errorf("No arguments provided for --cert-yml-field")
 						}
 					} else {
 						*err = fmt.Errorf("%s does not support --cert", cta.CommandName)
@@ -316,7 +355,7 @@ func NewCertToolArguments() *CertToolArguments {
 				},
 			},
 			/////////////////////////////////////////////////
-			"--info-filter-root": &certToolFlagProperty{
+			"--filter-on-root": &certToolFlagProperty{
 				description:        "Filter the info command output to show root CA certificates",
 				argumentCount:      0,
 				compatibleCommands: []string{"info"},
@@ -325,12 +364,12 @@ func NewCertToolArguments() *CertToolArguments {
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
 						cta.InfoOptions.FilterRootCA = true
 					} else {
-						*err = fmt.Errorf("%s does not support --info-filter-root", cta.CommandName)
+						*err = fmt.Errorf("%s does not support --filter-on-root", cta.CommandName)
 					}
 				},
 			},
 			/////////////////////////////////////////////////
-			"--info-filter-intermediate": &certToolFlagProperty{
+			"--filter-on-intermediate": &certToolFlagProperty{
 				description:        "Filter the info command output to show intermediate certificates",
 				argumentCount:      0,
 				compatibleCommands: []string{"info"},
@@ -339,12 +378,12 @@ func NewCertToolArguments() *CertToolArguments {
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
 						cta.InfoOptions.FilterIntermediate = true
 					} else {
-						*err = fmt.Errorf("%s does not support --info-filter-intermediate", cta.CommandName)
+						*err = fmt.Errorf("%s does not support --filter-on-intermediate", cta.CommandName)
 					}
 				},
 			},
 			/////////////////////////////////////////////////
-			"--info-filter-server": &certToolFlagProperty{
+			"--filter-on-server": &certToolFlagProperty{
 				description:        "Filter the info command output to show server certificates",
 				argumentCount:      0,
 				compatibleCommands: []string{"info"},
@@ -353,12 +392,12 @@ func NewCertToolArguments() *CertToolArguments {
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
 						cta.InfoOptions.FilterServerCertificate = true
 					} else {
-						*err = fmt.Errorf("%s does not support --info-filter-server", cta.CommandName)
+						*err = fmt.Errorf("%s does not support --filter-on-server", cta.CommandName)
 					}
 				},
 			},
 			/////////////////////////////////////////////////
-			"--info-hide-pem": &certToolFlagProperty{
+			"--hide-pem": &certToolFlagProperty{
 				description:        "Hide PEM blocks in the info command output",
 				argumentCount:      0,
 				compatibleCommands: []string{"info"},
@@ -367,7 +406,7 @@ func NewCertToolArguments() *CertToolArguments {
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
 						cta.InfoOptions.HidePEMOutput = true
 					} else {
-						*err = fmt.Errorf("%s does not support --info-hide-pem", cta.CommandName)
+						*err = fmt.Errorf("%s does not support --hide-pem", cta.CommandName)
 					}
 				},
 			},

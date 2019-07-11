@@ -125,6 +125,7 @@ var _ = Describe("Info Command Test", func() {
 				certificate.Certificate{
 					Certificate: &x509.Certificate{
 						Issuer: pkix.Name{CommonName: "DAWU ROOT X5"}, Subject: pkix.Name{CommonName: "DAWU ROOT X5"}},
+					PemBlock: &[]byte{},
 				})
 
 			var result = infoCommand.Execute()

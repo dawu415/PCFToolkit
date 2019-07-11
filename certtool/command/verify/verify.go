@@ -3,6 +3,7 @@ package verify
 import (
 	"crypto/rsa"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -89,22 +90,24 @@ func (cmd *Verify) Execute() result.Result {
 	var results [][]ResultData
 	useSystemRootCerts := true
 
-	serverCertCount := len(cmd.certRepo.ServerCerts)
-	if serverCertCount > 0 {
-		results = make([][]ResultData, serverCertCount)
+	allCerts := append(append(cmd.certRepo.ServerCerts, cmd.certRepo.IntermediateCerts...), cmd.certRepo.RootCACerts...)
+	certCount := len(allCerts)
+	if certCount > 0 {
+		results = make([][]ResultData, certCount)
 	}
-	for idx, serverCert := range cmd.certRepo.ServerCerts {
+	for idx, cert := range allCerts {
 
-		if cmd.verifyTrustChain {
+		// Only do this verification on Server Certificates
+		if cmd.verifyTrustChain && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
 			// Check if the user provided the root CA certs.
 			if len(cmd.certRepo.RootCACerts) == 0 {
-				cmdResult := cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts)
+				cmdResult := cmd.stepCheckCertificateTrustChain(cert, useSystemRootCerts)
 				// If not, we should use the system CA cert store.
 				results[idx] = append(results[idx], cmdResult)
 			} else {
 				// Otherwise, test both the provided root CA certs and the system store.
-				resultUsingProvidedRootCA := cmd.stepCheckCertificateTrustChain(serverCert, !useSystemRootCerts)
-				resultUsingSystemRootCA := cmd.stepCheckCertificateTrustChain(serverCert, useSystemRootCerts)
+				resultUsingProvidedRootCA := cmd.stepCheckCertificateTrustChain(cert, !useSystemRootCerts)
+				resultUsingSystemRootCA := cmd.stepCheckCertificateTrustChain(cert, useSystemRootCerts)
 
 				// We should update the overall success here to be true, if any of them succeeded because it means it found
 				// a trust chain.
@@ -119,16 +122,17 @@ func (cmd *Verify) Execute() result.Result {
 
 			}
 		}
-		if cmd.verifyDNS {
-			results[idx] = append(results[idx], cmd.stepCheckCertificateDomainsForPCF(serverCert))
+		if cmd.verifyDNS && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
+			results[idx] = append(results[idx], cmd.stepCheckCertificateDomainsForPCF(cert))
 		}
 
+		// We can verify expiration on all certificate types
 		if cmd.verifyCertExpiration {
-			results[idx] = append(results[idx], cmd.stepCheckCertificateExpiry(serverCert))
+			results[idx] = append(results[idx], cmd.stepCheckCertificateExpiry(cert))
 		}
 
-		if cmd.verifyCertPrivateKeyMatch {
-			results[idx] = append(results[idx], cmd.stepCheckCertificateWithProvidedPrivateKey(serverCert, cmd.certRepo.PrivateKeys))
+		if cmd.verifyCertPrivateKeyMatch && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
+			results[idx] = append(results[idx], cmd.stepCheckCertificateWithProvidedPrivateKey(cert, cmd.certRepo.PrivateKeys))
 		}
 	}
 	return &Result{
@@ -136,11 +140,30 @@ func (cmd *Verify) Execute() result.Result {
 	}
 }
 
+// generateSignatureString generates a short output of the pem block. This will aid certificate identification
+// should a filename not exist.
+func (cmd *Verify) generateSignatureString(pemBlock string) string {
+	//Remove the top and bottom comment lines
+	reg := regexp.MustCompile("-----.*-----\r{0,1}\n")
+	startBlock := reg.ReplaceAllString(pemBlock, "${1}")
+	// Remove new lines
+	reg = regexp.MustCompile("\r{0,1}\n{0,1}")
+	startBlock = reg.ReplaceAllString(startBlock, "${1}")
+
+	returnString := startBlock
+
+	if len(startBlock) != 0 {
+		returnString = startBlock[:10] + "..." + startBlock[len(startBlock)-10:]
+	}
+
+	return returnString
+}
+
 // stepCheckCertificateTrustChain determines if a server certificate has a trust chain with
 // provided intermediate and root certificates.
 // If ignoreCertRepoRootCA is true, the command ensures that the Certificate trust chain is determined from
 // the system trust store instead of provided root certificates.
-func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certificate, ignoreCertRepoRootCA bool) ResultData {
+func (cmd *Verify) stepCheckCertificateTrustChain(inputCert certificate.Certificate, ignoreCertRepoRootCA bool) ResultData {
 
 	rootCertMessage := "using System Root Certificates."
 	var rootCertificates []certificate.Certificate
@@ -149,10 +172,10 @@ func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certifi
 		rootCertMessage = "using provided Root Certificates."
 	}
 
-	hasTrustedChain := cmd.x509VerifyLib.TrustChainExistOn(serverCert, rootCertificates, cmd.certRepo.IntermediateCerts)
+	hasTrustedChain := cmd.x509VerifyLib.TrustChainExistOn(inputCert, rootCertificates, cmd.certRepo.IntermediateCerts)
 
 	verifyStepResult := StepResultData{
-		Message: fmt.Sprintf("Verifying trust chain of %s", serverCert.Label),
+		Message: fmt.Sprintf("Verifying trust chain of %s", inputCert.Label),
 	}
 
 	if hasTrustedChain {
@@ -165,16 +188,17 @@ func (cmd *Verify) stepCheckCertificateTrustChain(serverCert certificate.Certifi
 
 	return ResultData{
 		Source:           SourceVerifyTrustChain,
-		Title:            fmt.Sprintf("Verifying Certificate Trust Chain %s", rootCertMessage),
+		Title:            fmt.Sprintf("Verifying Certificate Trust Chain %s - %s", rootCertMessage, inputCert.Certificate.Subject.CommonName),
 		StepResults:      []StepResultData{verifyStepResult},
 		OverallSucceeded: verifyStepResult.Status == result.StatusSuccess,
+		Signature:        cmd.generateSignatureString(string(*inputCert.PemBlock)),
 		Error:            nil,
 	}
 }
 
 // stepCheckCertificateDomainsForPCF checks to see if the required PCF DNS names exists in a
 // server certificate
-func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Certificate) ResultData {
+func (cmd *Verify) stepCheckCertificateDomainsForPCF(inputCert certificate.Certificate) ResultData {
 
 	// We'll add the period at the end of the DNS names to ensure
 	// our string comparison method is strict on the format
@@ -189,7 +213,7 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 	var resultsArray []StepResultData
 	for _, dnsName := range DNSNames {
 		var found = false
-		for _, dnsInCert := range serverCert.Certificate.DNSNames {
+		for _, dnsInCert := range inputCert.Certificate.DNSNames {
 			if strings.Contains(dnsInCert, dnsName) {
 				found = true
 				break
@@ -213,31 +237,32 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(serverCert certificate.Cert
 	}
 	return ResultData{
 		Source:           SourceVerifyCertSANS,
-		Title:            "Checking PCF SANs on Certificate",
+		Title:            fmt.Sprintf("Checking PCF SANs on Certificate - %s", inputCert.Certificate.Subject.CommonName),
 		StepResults:      resultsArray,
 		OverallSucceeded: overralResult,
+		Signature:        cmd.generateSignatureString(string(*inputCert.PemBlock)),
 		Error:            nil,
 	}
 }
 
 // stepCheckCertificateExpiry checks the expiry of a certificate with in a 6 month period.
-func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate) ResultData {
+func (cmd *Verify) stepCheckCertificateExpiry(inputCert certificate.Certificate) ResultData {
 
 	stepResult := StepResultData{
-		Message: fmt.Sprintf("Verifying %s\nValid From:\t%s UNTIL %s\n", serverCert.Label, serverCert.Certificate.NotBefore.String(), serverCert.Certificate.NotAfter.String()),
+		Message: fmt.Sprintf("Verifying %s\nValid From:\t%s UNTIL %s\n", inputCert.Label, inputCert.Certificate.NotBefore.String(), inputCert.Certificate.NotAfter.String()),
 	}
 
 	currentTime := time.Now()
 
-	if currentTime.After(serverCert.Certificate.NotBefore) &&
-		currentTime.Before(serverCert.Certificate.NotAfter) {
+	if currentTime.After(inputCert.Certificate.NotBefore) &&
+		currentTime.Before(inputCert.Certificate.NotAfter) {
 		// Check if our server cert will expire within the next 6 months.
-		if currentTime.AddDate(0, 6, 0).Before(serverCert.Certificate.NotAfter) {
+		if currentTime.AddDate(0, 6, 0).Before(inputCert.Certificate.NotAfter) {
 			stepResult.Status = result.StatusSuccess
 			stepResult.StatusMessage = "OK!"
 		} else {
 			stepResult.Status = result.StatusWarning
-			stepResult.StatusMessage = fmt.Sprintf("WARNING - This certificate expires in %0.2f days (%0.2f months)\n", serverCert.Certificate.NotAfter.Sub(currentTime).Hours()/24, serverCert.Certificate.NotAfter.Sub(currentTime).Hours()/(24*365/12))
+			stepResult.StatusMessage = fmt.Sprintf("WARNING - This certificate expires in %0.2f days (%0.2f months)\n", inputCert.Certificate.NotAfter.Sub(currentTime).Hours()/24, inputCert.Certificate.NotAfter.Sub(currentTime).Hours()/(24*365/12))
 		}
 	} else {
 		stepResult.Status = result.StatusFailed
@@ -246,24 +271,25 @@ func (cmd *Verify) stepCheckCertificateExpiry(serverCert certificate.Certificate
 
 	return ResultData{
 		Source:           SourceVerifyCertExpiry,
-		Title:            "Checking Certificate Expiry",
+		Title:            fmt.Sprintf("Checking Certificate Expiry - %s", inputCert.Certificate.Subject.CommonName),
 		StepResults:      []StepResultData{stepResult},
 		OverallSucceeded: stepResult.Status == result.StatusSuccess,
+		Signature:        cmd.generateSignatureString(string(*inputCert.PemBlock)),
 		Error:            nil,
 	}
 }
 
 // stepCheckCertificateWithProvidedPrivateKey determines if a server certificate and its corresponding
 // provided private key match.
-func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certificate.Certificate, privateKeys map[string]privatekey.PrivateKey) ResultData {
+func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(inputCert certificate.Certificate, privateKeys map[string]privatekey.PrivateKey) ResultData {
 	// If the modulus of the private key is equal the server cert's modulus, it matches
 	var err error
 	stepResult := StepResultData{}
 
-	if key, ok := privateKeys[serverCert.Label]; ok {
-		stepResult.Message = fmt.Sprintf("Verifying matching certificate and key:\t%s with %s\n", serverCert.Label, key.Label)
+	if key, ok := privateKeys[inputCert.Label]; ok {
+		stepResult.Message = fmt.Sprintf("Verifying matching certificate and key:\t%s with %s\n", inputCert.Label, key.Label)
 
-		if pubKey, ok := serverCert.Certificate.PublicKey.(rsa.PublicKey); ok {
+		if pubKey, ok := inputCert.Certificate.PublicKey.(rsa.PublicKey); ok {
 			if privateKey, ok := key.PrivateKey.(rsa.PrivateKey); ok {
 
 				if pubKey.N.Cmp(privateKey.N) == 0 {
@@ -292,9 +318,10 @@ func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(serverCert certifi
 
 	return ResultData{
 		Source:           SourceVerifyCertPrivateKeyMatch,
-		Title:            "Checking the certificate and private key match",
+		Title:            fmt.Sprintf("Checking the certificate and private key match - %s", inputCert.Certificate.Subject.CommonName),
 		StepResults:      []StepResultData{stepResult},
 		OverallSucceeded: stepResult.Status == result.StatusSuccess || stepResult.Status == result.StatusNotChecked,
+		Signature:        cmd.generateSignatureString(string(*inputCert.PemBlock)),
 		Error:            err,
 	}
 }

@@ -174,7 +174,7 @@ var _ = Describe("Verify Command Test", func() {
 			Expect(ok).To(BeTrue())
 
 			Expect(certRepo.RootCACerts).Should(HaveLen(1))
-			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult).Should(HaveLen(2))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
 			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
 			Expect(filteredResults).ToNot(BeNil())
@@ -195,7 +195,7 @@ var _ = Describe("Verify Command Test", func() {
 			Expect(ok).To(BeTrue())
 			Expect(certRepo.RootCACerts).Should(HaveLen(1))
 
-			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult).Should(HaveLen(2))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
 			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
 			Expect(filteredResults).ToNot(BeNil())
@@ -288,7 +288,7 @@ var _ = Describe("Verify Command Test", func() {
 			Expect(ok).To(BeTrue())
 
 			Expect(certRepo.RootCACerts).Should(HaveLen(1))
-			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult).Should(HaveLen(2))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
 			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
 			Expect(filteredResults).ToNot(BeNil())
@@ -307,7 +307,7 @@ var _ = Describe("Verify Command Test", func() {
 			Expect(ok).To(BeTrue())
 			Expect(certRepo.RootCACerts).Should(HaveLen(1))
 
-			Expect(verifyResult).Should(HaveLen(1))
+			Expect(verifyResult).Should(HaveLen(2))
 			Expect(verifyResult[0]).ShouldNot(BeNil())
 			filteredResults := filterSourceVerifyResults(verifyResult, verify.SourceVerifyTrustChain)
 			Expect(filteredResults).ToNot(BeNil())

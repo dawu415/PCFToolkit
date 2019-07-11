@@ -3,9 +3,10 @@ package certificateRepository_test
 import (
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository"
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
-	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate/mocks"
-	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/fileIO/mocks"
-	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey/mocks"
+	certificate_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate/mocks"
+	fileIO_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/fileIO/mocks"
+	privatekey_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/privatekey/mocks"
+	ymlParser_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/ymlparser/mocks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,12 +16,54 @@ var _ = Describe("Certificate Repository tests", func() {
 	var fileIOMock *fileIO_mock.MockFileIO
 	var certLoader *certificate_mock.CertificateMock
 	var keyLoader *privatekey_mock.PrivateKeyMock
+	var ymlParser *ymlParser_mock.YMLParserDataMock
+
 	BeforeEach(func() {
 
 		fileIOMock = fileIO_mock.NewMockFileIO()
 		certLoader = certificate_mock.NewPEMCertificateMock()
 		keyLoader = privatekey_mock.NewPrivateKeyMock()
-		cert = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, keyLoader)
+		ymlParser = ymlParser_mock.NewYMLParserDataMock()
+		cert = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
+	})
+
+	It("should be able to successfully install a certificate from a YML file", func() {
+
+		fileIOMock.FileContent = "ABCD"
+		fileIOMock.OpenAndReadFailed = false
+
+		ymlParser.EncounteredAnError = false
+		certLoader.CertificateType = certificate.TypeServerCertificate
+		certLoader.LoadPEMCertificateFailed = false
+
+		err := cert.InstallCertificatesFromYML("somefile.pem", "/some/path")
+
+		Expect(err).To(BeNil())
+		Expect(len(cert.ServerCerts)).To(Equal(1))
+		Expect(cert.ServerCerts[0].Type).To(Equal(certificate.TypeServerCertificate))
+		Expect(cert.ServerCerts[0].Label).To(Equal("somefile.pem--/some/path"))
+		Expect(cert.ServerCerts[0].Certificate.Raw).To(Equal([]byte("ABCD/some/path")))
+		Expect(len(cert.RootCACerts)).To(Equal(0))
+		Expect(len(cert.IntermediateCerts)).To(Equal(0))
+
+	})
+
+	It("should be able to successfully handle a failure to install a certificate from a YML file", func() {
+
+		fileIOMock.FileContent = "ABCD"
+		fileIOMock.OpenAndReadFailed = false
+
+		ymlParser.EncounteredAnError = true
+		certLoader.CertificateType = certificate.TypeServerCertificate
+		certLoader.LoadPEMCertificateFailed = false
+
+		err := cert.InstallCertificatesFromYML("somefile.pem", "/some/path")
+
+		Expect(err).ToNot(BeNil())
+		Expect(len(cert.ServerCerts)).To(Equal(0))
+		Expect(len(cert.RootCACerts)).To(Equal(0))
+		Expect(len(cert.IntermediateCerts)).To(Equal(0))
+
 	})
 
 	It("should be able to successfully install a server certificate", func() {

@@ -254,4 +254,40 @@ var _ = Describe("certToolArgs", func() {
 		Expect(len(usageStringWithCommand)).ToNot(BeZero())
 		Expect(len(usageStringWithCommand) == len(usageStringNoCommand)).Should(BeTrue())
 	})
+
+	It("should work with a valid --cert-yml-field for info", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "info", "--cert-yml-field", "appz.yml", "/path/cert"})
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+		Expect(len(cta.CertificateYMLFiles)).Should(Equal(1))
+		Expect(cta.CertificateYMLFiles[0].YMLFilename).Should(Equal("appz.yml"))
+		Expect(cta.CertificateYMLFiles[0].YMLPath).Should(Equal("/path/cert"))
+	})
+
+	It("should work with a valid --cert-yml-field for verify", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--cert-yml-field", "appz.yml", "/path/cert"})
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+		Expect(len(cta.CertificateYMLFiles)).Should(Equal(1))
+		Expect(cta.CertificateYMLFiles[0].YMLFilename).Should(Equal("appz.yml"))
+		Expect(cta.CertificateYMLFiles[0].YMLPath).Should(Equal("/path/cert"))
+	})
+
+	It("should fail with an invalid input --cert-yml-field for info", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "info", "--cert-yml-field", "appz.yml"})
+		Expect(err).Should(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+	})
+
+	It("should fail with an invalid input having another flag --cert-yml-field for info", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "info", "--cert-yml-field", "appz.yml", "--blah"})
+		Expect(err).Should(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+	})
+
+	It("should fail with an invalid input having another flag --cert-yml-field for info", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "info", "--cert-yml-field", "--balh", "--blah"})
+		Expect(err).Should(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+	})
 })

@@ -3,6 +3,7 @@ package info
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
@@ -30,6 +31,12 @@ type CertificateInfo struct {
 type CertificateTrustChains struct {
 	Chains [][]certificate.Certificate
 	Error  error
+}
+
+// dos2unixString converts a string containing \r\n to have only \n
+func (result *Result) dos2unixString(input string) string {
+	reg := regexp.MustCompile("\r{0,1}")
+	return reg.ReplaceAllString(input, "${1}")
 }
 
 // Out outputs data to some specific stream. Currently, it is set to output to stdout
@@ -77,7 +84,7 @@ func (result *Result) Out() {
 
 		// Top level result Root Certificates actually don't have a trust chain, so we'll have to print it here
 		if cert.IsRootCert() && !result.hidePEMOutput {
-			fmt.Printf("\n\tRoot CA Certificate - "+cert.Certificate.Subject.CommonName+":\n\n%s\n\n", string(*cert.PemBlock))
+			fmt.Printf("\n\tRoot CA Certificate - "+cert.Certificate.Subject.CommonName+":\n\n%s\n\n", result.dos2unixString(string(*cert.PemBlock)))
 		}
 
 		var sb = strings.Builder{}
@@ -118,7 +125,7 @@ func (result *Result) Out() {
 							// This caters for the case if the certificate was actually a system root certificate
 							// for which we are unable to extract
 							if cert.PemBlock != nil {
-								sb.WriteString(string(*cert.PemBlock))
+								sb.WriteString(result.dos2unixString(string(*cert.PemBlock)))
 								sb.WriteString("\n\n")
 							} else {
 								if cert.Type == certificate.TypeRootCACertificate {
