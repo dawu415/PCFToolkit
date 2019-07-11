@@ -27,10 +27,11 @@ type Verify struct {
 	verifyCertExpiration      bool
 	verifyCertPrivateKeyMatch bool
 	x509VerifyLib             x509Lib.Interface
+	containsFilter            string
 }
 
 // NewVerifyCommand creates a new verify command with a given certificate respository, system domain and app domain
-func NewVerifyCommand(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch bool) *Verify {
+func NewVerifyCommand(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch bool, containsFilter string) *Verify {
 	// If all verification steps are false (it wasn't specified by user) then show all the verify steps
 	if verifyTrustChain == false &&
 		verifyDNS == false &&
@@ -51,11 +52,12 @@ func NewVerifyCommand(certRepo *certificateRepository.CertificateRepository, sys
 		verifyCertExpiration:      verifyCertExpiration,
 		verifyCertPrivateKeyMatch: verifyCertPrivateKeyMatch,
 		x509VerifyLib:             x509Lib.NewX509Lib(),
+		containsFilter:            containsFilter,
 	}
 }
 
 // NewVerifyCommandCustomVerifyLib returns a verify command with given certificate repository, system domain, app domain and an x509VerifyLib
-func NewVerifyCommandCustomVerifyLib(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch bool, verifyLib x509Lib.Interface) *Verify {
+func NewVerifyCommandCustomVerifyLib(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch bool, containsFilter string, verifyLib x509Lib.Interface) *Verify {
 	// If all verification steps are false (it wasn't specified by user) then show all the verify steps
 	if verifyTrustChain == false &&
 		verifyDNS == false &&
@@ -76,6 +78,7 @@ func NewVerifyCommandCustomVerifyLib(certRepo *certificateRepository.Certificate
 		verifyCertExpiration:      verifyCertExpiration,
 		verifyCertPrivateKeyMatch: verifyCertPrivateKeyMatch,
 		x509VerifyLib:             verifyLib,
+		containsFilter:            containsFilter,
 	}
 }
 
@@ -96,6 +99,13 @@ func (cmd *Verify) Execute() result.Result {
 		results = make([][]ResultData, certCount)
 	}
 	for idx, cert := range allCerts {
+
+		if len(cmd.containsFilter) > 0 {
+			if !strings.Contains(strings.ToLower(cert.Certificate.Subject.CommonName), strings.ToLower(cmd.containsFilter)) &&
+				!strings.Contains(strings.ToLower(strings.Join(cert.Certificate.DNSNames, " ")), strings.ToLower(cmd.containsFilter)) {
+				continue
+			}
+		}
 
 		// Only do this verification on Server Certificates
 		if cmd.verifyTrustChain && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {

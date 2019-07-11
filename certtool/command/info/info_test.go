@@ -4,6 +4,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 
+	ymlparser_mock "github.com/dawu415/PCFToolkit/certtool/certificateRepository/ymlparser/mocks"
+
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository"
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 
@@ -25,6 +27,7 @@ var _ = Describe("Info Command Test", func() {
 	var fileIOMock *fileIO_mock.MockFileIO
 	var certLoader *certificate_mock.CertificateMock
 	var keyLoader *privatekey_mock.PrivateKeyMock
+	var ymlParser *ymlparser_mock.YMLParserDataMock
 
 	BeforeEach(func() {
 		certRepo = certificateRepository.NewCertificateRepository()
@@ -33,7 +36,8 @@ var _ = Describe("Info Command Test", func() {
 		fileIOMock = fileIO_mock.NewMockFileIO()
 		certLoader = certificate_mock.NewPEMCertificateMock()
 		keyLoader = privatekey_mock.NewPrivateKeyMock()
-		certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, keyLoader)
+		ymlParser = ymlparser_mock.NewYMLParserDataMock()
+		certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
 
 		infoCommand = info.NewInfoCommandCustomX509Lib(certRepo, false, false, false, false, "", mockx509Lib)
 	})

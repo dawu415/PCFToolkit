@@ -1,6 +1,8 @@
 package info
 
 import (
+	"strings"
+
 	"github.com/dawu415/PCFToolkit/certtool/certificateRepository/certificate"
 	"github.com/dawu415/PCFToolkit/certtool/command/result"
 	"github.com/dawu415/PCFToolkit/certtool/command/x509Lib"
@@ -71,6 +73,11 @@ func (cmd *Info) Execute() result.Result {
 	var trustChainMap = map[certificate.Certificate]CertificateTrustChains{}
 
 	for _, serverCert := range cmd.certRepo.ServerCerts {
+
+		if cmd.skipCert(serverCert) {
+			continue
+		}
+
 		var trustChains, err = cmd.buildCertificateTrustChain(serverCert)
 
 		trustChainMap[serverCert] = CertificateTrustChains{
@@ -79,6 +86,10 @@ func (cmd *Info) Execute() result.Result {
 		}
 	}
 	for _, intCert := range cmd.certRepo.IntermediateCerts {
+
+		if cmd.skipCert(intCert) {
+			continue
+		}
 		var trustChains, err = cmd.buildCertificateTrustChain(intCert)
 
 		trustChainMap[intCert] = CertificateTrustChains{
@@ -96,6 +107,25 @@ func (cmd *Info) Execute() result.Result {
 		hidePEMOutput:           cmd.hidePEMOutput,
 		containsFilter:          cmd.containsFilter,
 	}
+}
+
+func (cmd *Info) skipCert(cert certificate.Certificate) bool {
+	var skip = false
+	if len(cmd.containsFilter) > 0 {
+		if !strings.Contains(strings.ToLower(cert.Certificate.Subject.CommonName), strings.ToLower(cmd.containsFilter)) &&
+			!strings.Contains(strings.ToLower(strings.Join(cert.Certificate.DNSNames, " ")), strings.ToLower(cmd.containsFilter)) {
+			skip = true
+		}
+	}
+
+	if !(cmd.filterRootCA && cert.Type == certificate.TypeRootCACertificate ||
+		cmd.filterIntermediate && cert.Type == certificate.TypeIntermediateCertificate ||
+		cmd.filterServerCertificate &&
+			(cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate)) {
+		skip = true
+	}
+
+	return skip
 }
 
 func (cmd *Info) buildCertificateTrustChain(inputCert certificate.Certificate) ([][]certificate.Certificate, error) {

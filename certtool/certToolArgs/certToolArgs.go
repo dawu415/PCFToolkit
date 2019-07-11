@@ -44,6 +44,7 @@ type VerifyOptions struct {
 	VerifyDNS                 bool
 	VerifyCertExpiration      bool
 	VerifyCertPrivateKeyMatch bool
+	ContainsFilter            string
 }
 
 // InfoOptions hold the information for optional input flags for the Info Commandå
@@ -414,13 +415,17 @@ func NewCertToolArguments() *CertToolArguments {
 			"--name": &certToolFlagProperty{
 				description:        "Employs 'contains' string filtering on subject Common Name or SANs of certificate",
 				argumentCount:      1,
-				compatibleCommands: []string{"info"},
+				compatibleCommands: []string{"info", "verify"},
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
 						if (index + argCount) < len(args) {
 							if !strings.HasPrefix(args[index+1], "-") {
-								cta.InfoOptions.ContainsFilter = args[index+1]
+								if cta.CommandName == "info" {
+									cta.InfoOptions.ContainsFilter = args[index+1]
+								} else if cta.CommandName == "verify" {
+									cta.VerifyOptions.ContainsFilter = args[index+1]
+								}
 							} else {
 								*err = fmt.Errorf("No arguments provided for --name. Got %s instead", args[index+1])
 							}
@@ -428,7 +433,7 @@ func NewCertToolArguments() *CertToolArguments {
 							*err = fmt.Errorf("No arguments provided for --name")
 						}
 					} else {
-						*err = fmt.Errorf("%s does not support --info-hide-pem", cta.CommandName)
+						*err = fmt.Errorf("%s does not support --name", cta.CommandName)
 					}
 				},
 			},
