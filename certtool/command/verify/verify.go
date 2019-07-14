@@ -162,7 +162,7 @@ func (cmd *Verify) generateSignatureString(pemBlock string) string {
 
 	returnString := startBlock
 
-	if len(startBlock) != 0 {
+	if len(startBlock) != 0 && len(startBlock) >= 10 {
 		returnString = startBlock[:10] + "..." + startBlock[len(startBlock)-10:]
 	}
 
