@@ -157,7 +157,7 @@ func (cmd *Verify) Execute() result.Result {
 // should a filename not exist.
 func (cmd *Verify) generateSignatureString(pemBlock string) string {
 	//Remove the top and bottom comment lines
-	reg := regexp.MustCompile("-----.*-----\r{0,1}\n")
+	reg := regexp.MustCompile("-----.*-----\r{0,1}\n{0,1}")
 	startBlock := reg.ReplaceAllString(pemBlock, "${1}")
 	// Remove new lines
 	reg = regexp.MustCompile("\r{0,1}\n{0,1}")
