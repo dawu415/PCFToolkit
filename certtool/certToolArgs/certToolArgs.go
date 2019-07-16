@@ -80,6 +80,7 @@ type CertToolArguments struct {
 }
 
 // NewCertToolArguments returns an initialized certToolArguments struct
+// For new flags, add them to this map of flags here.
 func NewCertToolArguments() *CertToolArguments {
 	return &CertToolArguments{
 		programName:           filepath.Base(os.Args[0]),
