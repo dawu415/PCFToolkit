@@ -5,7 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/tabwriter"
+
+	"github.com/olekukonko/tablewriter"
 )
 
 // COMMANDS is the list of supported commands in this application
@@ -94,7 +95,7 @@ func NewCertToolArguments() *CertToolArguments {
 		flags: map[string]*certToolFlagProperty{
 			/////////////////////////////////////////////////
 			"--server-cert": &certToolFlagProperty{
-				description:        "Takes in a server certificate filename and optionally, its unencrypted private key filename. Separated by spaces. The format is --server-cert server.crt [server.key]",
+				description:        "Takes in a server certificate filename and optionally, its unencrypted private key filename. Separated by spaces. The format is --server-cert <server.crt> [<server.key>]",
 				argumentCount:      1,
 				compatibleCommands: []string{"verify", "info"},
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
@@ -144,7 +145,7 @@ func NewCertToolArguments() *CertToolArguments {
 			},
 			/////////////////////////////////////////////////
 			"--cert": &certToolFlagProperty{
-				description:        "Takes in a certificate filename containing one or more certificates. The format is --cert cert.pem",
+				description:        "Takes in a certificate filename containing one or more certificates. The format is --cert <cert.pem>",
 				argumentCount:      1,
 				compatibleCommands: []string{"verify", "info"},
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
@@ -199,7 +200,7 @@ func NewCertToolArguments() *CertToolArguments {
 			},
 			/////////////////////////////////////////////////
 			"--root-ca": &certToolFlagProperty{
-				description:        "Takes in a root ca certificate.  If specified, this will be used as the trusted CA for the input certificate. Otherwise, the system trusted certs are used instead. Usage: --root-ca rootca.pem",
+				description:        "Takes in a root ca certificate.  If specified, this will be used as the trusted CA for the input certificate. Otherwise, the system trusted certs are used instead. Usage: --root-ca <rootca.pem>",
 				argumentCount:      1,
 				compatibleCommands: []string{"verify", "info"},
 				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
@@ -466,37 +467,44 @@ func (cta *CertToolArguments) IsCurrentCommandSupported(compatibleCommands []str
 // GetUsage returns the usage instruction text to display when help is called.
 func (cta *CertToolArguments) GetUsage(commandToRun string) string {
 	var sb strings.Builder
-	var usageString = `Usage: %s COMMAND [--help] [FLAG1...FLAGn]
-
-	 COMMAND: A specific command that this program will run. Possible values include:`
+	var usageString = `Usage: %s COMMAND [--help] [FLAG1...FLAGn]`
 
 	sb.WriteString(fmt.Sprintf(usageString, cta.programName))
 	sb.WriteRune('\n')
-	var index = 1
+	sb.WriteRune('\n')
+	tbl := tablewriter.NewWriter(&sb)
+	sb.WriteString("  COMMAND: A specific command that this program will run. Possible values include:\n\n")
+	tbl.SetBorder(false)
+	tbl.SetColWidth(120)
+	tbl.SetColumnSeparator(" ")
+	tableData := [][]string{}
 	for cmd, description := range COMMANDS {
-		sb.WriteString(fmt.Sprintf("	 %d) ", index))
-		sb.WriteString(cmd)
-		sb.WriteString(":\t")
-		sb.WriteString(description)
-		sb.WriteRune('\n')
-		index++
+		tableData = append(tableData, []string{cmd + ":", description})
 	}
 
-	sb.WriteRune('\n')
+	tbl.AppendBulk(tableData)
+	tbl.Render()
+
 	sb.WriteRune('\n')
 	if _, ok := COMMANDS[commandToRun]; len(commandToRun) > 0 && ok {
-		sb.WriteString("Supported Flags:\n")
-		w := tabwriter.NewWriter(&sb, 0, 0, 2, ' ', 0)
+		sb.WriteString("Supported Flags:\n\n")
+
+		tbl := tablewriter.NewWriter(&sb)
+
+		tbl.SetBorder(false)
+		tbl.SetColWidth(120)
+		tableData := [][]string{}
 		for flag, property := range cta.flags {
 			for _, supportedCommand := range property.compatibleCommands {
 				if commandToRun == supportedCommand {
-					fmt.Fprintf(w, "     %s:\t%s\n\n", flag, property.description)
+					tableData = append(tableData, []string{flag, property.description})
 					break
 				}
 			}
-
 		}
-		w.Flush()
+
+		tbl.AppendBulk(tableData)
+		tbl.Render()
 	} else {
 		sb.WriteString("	 input --help after a command to get details about its flags\n")
 	}
