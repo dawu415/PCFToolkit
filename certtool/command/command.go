@@ -14,8 +14,8 @@ type Command interface {
 }
 
 // CreateVerifyCommand creates a Verify Command
-func CreateVerifyCommand(certRepo *certificateRepository.CertificateRepository, systemDomain, appDomain string, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch bool, containsFilter string) Command {
-	return verify.NewVerifyCommand(certRepo, systemDomain, appDomain, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch, containsFilter)
+func CreateVerifyCommand(certRepo *certificateRepository.CertificateRepository, systemDomain, appDomain string, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch bool, containsFilter string, certExpiryLength int) Command {
+	return verify.NewVerifyCommand(certRepo, systemDomain, appDomain, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch, containsFilter, certExpiryLength)
 }
 
 // CreateInfoCommand creates an Info Command

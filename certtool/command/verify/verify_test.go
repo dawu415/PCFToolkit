@@ -55,11 +55,11 @@ var _ = Describe("Verify Command Test", func() {
 
 		systemDomain = "sys"
 		appDomain = "apps"
-		verifyCommand = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, false, false, false, false, "", mockVerifyLib)
+		verifyCommand = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, false, false, false, false, "", 6, mockVerifyLib)
 	})
 
 	It("should return a verify command object", func() {
-		verifyCmd := verify.NewVerifyCommand(certRepo, "testsys", "testapp", false, false, false, false, "")
+		verifyCmd := verify.NewVerifyCommand(certRepo, "testsys", "testapp", false, false, false, false, "", 6)
 		Expect(verifyCmd).ShouldNot(BeNil())
 	})
 
@@ -105,7 +105,7 @@ var _ = Describe("Verify Command Test", func() {
 		It("should still run when TrustChain exists", func() {
 
 			certRepo.InstallCertificates("somefile1AAAA.pem")
-			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, "", mockVerifyLib)
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, "", 6, mockVerifyLib)
 
 			mockVerifyLib.TrustChainExist = true
 			cmdResult := verifyCmd.Execute()
@@ -130,7 +130,7 @@ var _ = Describe("Verify Command Test", func() {
 		It("should still run when TrustChain does not exist", func() {
 			mockVerifyLib.TrustChainExist = false
 			certRepo.InstallCertificates("somefile1BBBBBB.pem")
-			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, "", mockVerifyLib)
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, "", 6, mockVerifyLib)
 
 			cmdResult := verifyCmd.Execute()
 			verifyResult, ok := cmdResult.Data().([][]verify.ResultData)
@@ -158,7 +158,7 @@ var _ = Describe("Verify Command Test", func() {
 			fileIOMock.FileContent = "ABCD"
 			fileIOMock.OpenAndReadFailed = false
 
-			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, "", mockVerifyLib)
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, "", 6, mockVerifyLib)
 
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
@@ -340,7 +340,7 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.DNSNames = SANsInCert
 			certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
 			certRepo.InstallCertificates("somefile1.pem")
-			verifyCmd := verify.NewVerifyCommand(certRepo, "sys", "apps", false, true, false, false, "")
+			verifyCmd := verify.NewVerifyCommand(certRepo, "sys", "apps", false, true, false, false, "", 6)
 			verifyResult, ok := verifyCmd.Execute().Data().([][]verify.ResultData)
 
 			Expect(ok).To(BeTrue())
@@ -357,7 +357,7 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.DNSNames = []string{"*.apps.wu.com", "*.sys.wu.com", "*.login.sys.wu.com", "*.uaa.sys.wu.com"}
 			certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
 			certRepo.InstallCertificates("somefile1.pem")
-			verifyCmd := verify.NewVerifyCommand(certRepo, "sys", "apps", false, true, false, false, "")
+			verifyCmd := verify.NewVerifyCommand(certRepo, "sys", "apps", false, true, false, false, "", 6)
 			verifyResult, ok := verifyCmd.Execute().Data().([][]verify.ResultData)
 
 			Expect(ok).To(BeTrue())
@@ -408,7 +408,7 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
 
-			verifyCmd = verify.NewVerifyCommand(certRepo, "sys", "apps", false, false, true, false, "")
+			verifyCmd = verify.NewVerifyCommand(certRepo, "sys", "apps", false, false, true, false, "", 6)
 
 		})
 
@@ -562,7 +562,7 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
 
-			verifyCmd = verify.NewVerifyCommand(certRepo, "sys", "apps", false, false, false, true, "")
+			verifyCmd = verify.NewVerifyCommand(certRepo, "sys", "apps", false, false, false, true, "", 6)
 
 		})
 

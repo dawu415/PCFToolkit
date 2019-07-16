@@ -290,4 +290,36 @@ var _ = Describe("certToolArgs", func() {
 		Expect(err).Should(HaveOccurred())
 		Expect(cta).ToNot(BeNil())
 	})
+
+	It("should fail without input to --expire-warning-time", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--expire-warning-time"})
+		Expect(err).Should(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+	})
+
+	It("should fail with another flag as input to --expire-warning-time", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--expire-warning-time", "--balh"})
+		Expect(err).Should(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+	})
+
+	It("should fail with an non-number as input to --expire-warning-time", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--expire-warning-time", "xx"})
+		Expect(err).Should(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+	})
+
+	It("should fail as an input to info when using --expire-warning-time", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "info", "--expire-warning-time", "5"})
+		Expect(err).Should(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+	})
+
+	It("should succeed with an number as input to --expire-warning-time", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--expire-warning-time", "5"})
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+
+		Expect(cta.VerifyOptions.MinimumMonthsWarningToExpire).To(Equal(5))
+	})
 })

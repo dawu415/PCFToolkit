@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
@@ -39,13 +40,14 @@ type CertToolCertificateFileSet struct {
 
 // VerifyOptions hold the information for optional input flags for the Verify Commandå
 type VerifyOptions struct {
-	SystemDomain              string
-	AppsDomain                string
-	VerifyTrustChain          bool
-	VerifyDNS                 bool
-	VerifyCertExpiration      bool
-	VerifyCertPrivateKeyMatch bool
-	ContainsFilter            string
+	SystemDomain                 string
+	AppsDomain                   string
+	VerifyTrustChain             bool
+	VerifyDNS                    bool
+	VerifyCertExpiration         bool
+	VerifyCertPrivateKeyMatch    bool
+	ContainsFilter               string
+	MinimumMonthsWarningToExpire int
 }
 
 // InfoOptions hold the information for optional input flags for the Info Commandå
@@ -87,8 +89,9 @@ func NewCertToolArguments() *CertToolArguments {
 		CertificateYMLFiles:   []CertificateYMLFiles{},
 
 		VerifyOptions: VerifyOptions{
-			SystemDomain: "sys.",
-			AppsDomain:   "apps.",
+			SystemDomain:                 "sys.",
+			AppsDomain:                   "apps.",
+			MinimumMonthsWarningToExpire: 6,
 		},
 		InfoOptions: InfoOptions{},
 
@@ -409,6 +412,32 @@ func NewCertToolArguments() *CertToolArguments {
 						cta.InfoOptions.HidePEMOutput = true
 					} else {
 						*err = fmt.Errorf("%s does not support --hide-pem", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--expire-warning-time": &certToolFlagProperty{
+				description:        "Specify the minimum number of months to warn that a certificate will expire. defaults: 6 months",
+				argumentCount:      1,
+				compatibleCommands: []string{"verify"},
+				handler: func(index int, args []string, argCount int, cta *CertToolArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						if (index + argCount) < len(args) {
+							if !strings.HasPrefix(args[index+1], "-") {
+								var value int
+								value, *err = strconv.Atoi(args[index+1])
+								if *err == nil {
+									cta.VerifyOptions.MinimumMonthsWarningToExpire = value
+								}
+							} else {
+								*err = fmt.Errorf("No arguments provided for --expire-warning-time. Got %s instead", args[index+1])
+							}
+						} else {
+							*err = fmt.Errorf("No arguments provided for --expire-warning-time")
+						}
+					} else {
+						*err = fmt.Errorf("%s does not support --expire-warning-time", cta.CommandName)
 					}
 				},
 			},
