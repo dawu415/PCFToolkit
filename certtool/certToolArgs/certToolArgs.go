@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	Info "github.com/dawu415/PCFToolkit/certtool/command/info"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -50,15 +51,6 @@ type VerifyOptions struct {
 	MinimumMonthsWarningToExpire int
 }
 
-// InfoOptions hold the information for optional input flags for the Info Commandå
-type InfoOptions struct {
-	FilterRootCA            bool
-	FilterIntermediate      bool
-	FilterServerCertificate bool
-	HidePEMOutput           bool
-	ContainsFilter          string
-}
-
 // CertificateYMLFiles contains the path to the yml file and a string that holds the internal path to the certificate field
 type CertificateYMLFiles struct {
 	YMLFilename string
@@ -73,7 +65,7 @@ type CertToolArguments struct {
 	IntermediateCertFiles []string
 	ServerCertFiles       []CertToolCertificateFileSet
 	VerifyOptions         VerifyOptions
-	InfoOptions           InfoOptions
+	InfoOptions           Info.Options
 	CertificateYMLFiles   []CertificateYMLFiles
 	flags                 map[string]*certToolFlagProperty // Private variable
 	PrintHelp             bool
@@ -94,7 +86,7 @@ func NewCertToolArguments() *CertToolArguments {
 			AppsDomain:                   "apps.",
 			MinimumMonthsWarningToExpire: 6,
 		},
-		InfoOptions: InfoOptions{},
+		InfoOptions: Info.Options{},
 
 		flags: map[string]*certToolFlagProperty{
 			/////////////////////////////////////////////////

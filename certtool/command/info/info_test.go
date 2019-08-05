@@ -39,7 +39,7 @@ var _ = Describe("Info Command Test", func() {
 		ymlParser = ymlparser_mock.NewYMLParserDataMock()
 		certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
 
-		infoCommand = info.NewInfoCommandCustomX509Lib(certRepo, false, false, false, false, "", mockx509Lib)
+		infoCommand = info.NewInfoCommandCustomX509Lib(certRepo, &info.Options{}, mockx509Lib)
 	})
 
 	It("should be called the info command", func() {

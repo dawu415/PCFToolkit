@@ -12,54 +12,29 @@ import (
 
 // Info defines the struct holding the data necessary to execute an info command
 type Info struct {
-	certRepo                *certificateRepository.CertificateRepository
-	x509Lib                 x509Lib.Interface
-	filterRootCA            bool
-	filterIntermediate      bool
-	filterServerCertificate bool
-	hidePEMOutput           bool
-	containsFilter          string
+	certRepo *certificateRepository.CertificateRepository
+	x509Lib  x509Lib.Interface
+	options  *Options
 }
 
 // NewInfoCommand creates a new info command with a given certificate respository
-func NewInfoCommand(certRepo *certificateRepository.CertificateRepository, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput bool, containsFilter string) *Info {
-	// If no filtering option was selected, let's just make it all true, so that nothing is filtered out
-	if filterRootCA == false &&
-		filterIntermediate == false &&
-		filterServerCertificate == false {
-		filterRootCA = true
-		filterIntermediate = true
-		filterServerCertificate = true
-	}
-	return &Info{
-		certRepo:                certRepo,
-		x509Lib:                 x509Lib.NewX509Lib(),
-		filterRootCA:            filterRootCA,
-		filterIntermediate:      filterIntermediate,
-		filterServerCertificate: filterServerCertificate,
-		hidePEMOutput:           hidePEMOutput,
-		containsFilter:          containsFilter,
-	}
+func NewInfoCommand(certRepo *certificateRepository.CertificateRepository, infoOptions *Options) *Info {
+	return NewInfoCommandCustomX509Lib(certRepo, infoOptions, x509Lib.NewX509Lib())
 }
 
 // NewInfoCommandCustomX509Lib returns a info command with given certificate repository and an x509Lib
-func NewInfoCommandCustomX509Lib(certRepo *certificateRepository.CertificateRepository, filterRootCA, filterIntermediate, filterServerCertificate, hidePEMOutput bool, containsFilter string, x509Lib x509Lib.Interface) *Info {
+func NewInfoCommandCustomX509Lib(certRepo *certificateRepository.CertificateRepository, infoOptions *Options, x509Lib x509Lib.Interface) *Info {
 	// If no filtering option was selected, let's just make it all true, so that nothing is filtered out
-	if filterRootCA == false &&
-		filterIntermediate == false &&
-		filterServerCertificate == false {
-		filterRootCA = true
-		filterIntermediate = true
-		filterServerCertificate = true
+	if infoOptions.FilterRootCA == false && infoOptions.FilterIntermediate == false && infoOptions.FilterServerCertificate == false {
+		infoOptions.FilterRootCA = true
+		infoOptions.FilterIntermediate = true
+		infoOptions.FilterServerCertificate = true
 	}
+
 	return &Info{
-		certRepo:                certRepo,
-		x509Lib:                 x509Lib,
-		filterRootCA:            filterRootCA,
-		filterIntermediate:      filterIntermediate,
-		filterServerCertificate: filterServerCertificate,
-		hidePEMOutput:           hidePEMOutput,
-		containsFilter:          containsFilter,
+		certRepo: certRepo,
+		x509Lib:  x509Lib,
+		options:  infoOptions,
 	}
 }
 
@@ -102,23 +77,23 @@ func (cmd *Info) Execute() result.Result {
 	return &Result{
 		certificates:  append(append(cmd.certRepo.ServerCerts, cmd.certRepo.IntermediateCerts...), cmd.certRepo.RootCACerts...),
 		trustChains:   trustChainMap,
-		hidePEMOutput: cmd.hidePEMOutput,
+		hidePEMOutput: cmd.options.HidePEMOutput,
 	}
 }
 
 // skipCert checks if a certificate should be skipped based on input filters provided by user input.
 func (cmd *Info) skipCert(cert certificate.Certificate) bool {
 	var skip = false
-	if len(cmd.containsFilter) > 0 {
-		if !strings.Contains(strings.ToLower(cert.Certificate.Subject.CommonName), strings.ToLower(cmd.containsFilter)) &&
-			!strings.Contains(strings.ToLower(strings.Join(cert.Certificate.DNSNames, " ")), strings.ToLower(cmd.containsFilter)) {
+	if len(cmd.options.ContainsFilter) > 0 {
+		if !strings.Contains(strings.ToLower(cert.Certificate.Subject.CommonName), strings.ToLower(cmd.options.ContainsFilter)) &&
+			!strings.Contains(strings.ToLower(strings.Join(cert.Certificate.DNSNames, " ")), strings.ToLower(cmd.options.ContainsFilter)) {
 			skip = true
 		}
 	}
 
-	if !(cmd.filterRootCA && cert.Type == certificate.TypeRootCACertificate ||
-		cmd.filterIntermediate && cert.Type == certificate.TypeIntermediateCertificate ||
-		cmd.filterServerCertificate &&
+	if !(cmd.options.FilterRootCA && cert.Type == certificate.TypeRootCACertificate ||
+		cmd.options.FilterIntermediate && cert.Type == certificate.TypeIntermediateCertificate ||
+		cmd.options.FilterServerCertificate &&
 			(cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate)) {
 		skip = true
 	}
