@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	Info "github.com/dawu415/PCFToolkit/certtool/command/info"
+	Verify "github.com/dawu415/PCFToolkit/certtool/command/verify"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -39,18 +40,6 @@ type CertToolCertificateFileSet struct {
 	ServerCertPrivateKeyPassphrase string
 }
 
-// VerifyOptions hold the information for optional input flags for the Verify Commandå
-type VerifyOptions struct {
-	SystemDomain                 string
-	AppsDomain                   string
-	VerifyTrustChain             bool
-	VerifyDNS                    bool
-	VerifyCertExpiration         bool
-	VerifyCertPrivateKeyMatch    bool
-	ContainsFilter               string
-	MinimumMonthsWarningToExpire int
-}
-
 // CertificateYMLFiles contains the path to the yml file and a string that holds the internal path to the certificate field
 type CertificateYMLFiles struct {
 	YMLFilename string
@@ -64,7 +53,7 @@ type CertToolArguments struct {
 	RootCAFiles           []string
 	IntermediateCertFiles []string
 	ServerCertFiles       []CertToolCertificateFileSet
-	VerifyOptions         VerifyOptions
+	VerifyOptions         Verify.Options
 	InfoOptions           Info.Options
 	CertificateYMLFiles   []CertificateYMLFiles
 	flags                 map[string]*certToolFlagProperty // Private variable
@@ -81,7 +70,7 @@ func NewCertToolArguments() *CertToolArguments {
 		ServerCertFiles:       []CertToolCertificateFileSet{},
 		CertificateYMLFiles:   []CertificateYMLFiles{},
 
-		VerifyOptions: VerifyOptions{
+		VerifyOptions: Verify.Options{
 			SystemDomain:                 "sys.",
 			AppsDomain:                   "apps.",
 			MinimumMonthsWarningToExpire: 6,

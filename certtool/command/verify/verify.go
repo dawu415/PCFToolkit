@@ -19,69 +19,33 @@ import (
 
 // Verify defines the struct holding the data necessary to execute a command
 type Verify struct {
-	certRepo                  *certificateRepository.CertificateRepository
-	systemDomain              string
-	appsDomain                string
-	verifyTrustChain          bool
-	verifyDNS                 bool
-	verifyCertExpiration      bool
-	verifyCertPrivateKeyMatch bool
-	x509VerifyLib             x509Lib.Interface
-	containsFilter            string
-	CertExpiryWarningMonths   int
+	certRepo      *certificateRepository.CertificateRepository
+	options       *Options
+	x509VerifyLib x509Lib.Interface
 }
 
 // NewVerifyCommand creates a new verify command with a given certificate respository, system domain and app domain
-func NewVerifyCommand(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch bool, containsFilter string, certExpiryLength int) *Verify {
-	// If all verification steps are false (it wasn't specified by user) then show all the verify steps
-	if verifyTrustChain == false &&
-		verifyDNS == false &&
-		verifyCertPrivateKeyMatch == false &&
-		verifyCertExpiration == false {
-		verifyTrustChain = true
-		verifyDNS = true
-		verifyCertPrivateKeyMatch = true
-		verifyCertExpiration = true
-	}
-
-	return &Verify{
-		certRepo:                  certRepo,
-		systemDomain:              systemDoman,
-		appsDomain:                appDomain,
-		verifyTrustChain:          verifyTrustChain,
-		verifyDNS:                 verifyDNS,
-		verifyCertExpiration:      verifyCertExpiration,
-		verifyCertPrivateKeyMatch: verifyCertPrivateKeyMatch,
-		x509VerifyLib:             x509Lib.NewX509Lib(),
-		containsFilter:            containsFilter,
-		CertExpiryWarningMonths:   certExpiryLength,
-	}
+func NewVerifyCommand(certRepo *certificateRepository.CertificateRepository, verifyOptions *Options) *Verify {
+	return NewVerifyCommandCustomVerifyLib(certRepo, verifyOptions, x509Lib.NewX509Lib())
 }
 
 // NewVerifyCommandCustomVerifyLib returns a verify command with given certificate repository, system domain, app domain and an x509VerifyLib
-func NewVerifyCommandCustomVerifyLib(certRepo *certificateRepository.CertificateRepository, systemDoman, appDomain string, verifyTrustChain, verifyDNS, verifyCertExpiration, verifyCertPrivateKeyMatch bool, containsFilter string, certExpiryLength int, verifyLib x509Lib.Interface) *Verify {
+func NewVerifyCommandCustomVerifyLib(certRepo *certificateRepository.CertificateRepository, verifyOptions *Options, verifyLib x509Lib.Interface) *Verify {
 	// If all verification steps are false (it wasn't specified by user) then show all the verify steps
-	if verifyTrustChain == false &&
-		verifyDNS == false &&
-		verifyCertPrivateKeyMatch == false &&
-		verifyCertExpiration == false {
-		verifyTrustChain = true
-		verifyDNS = true
-		verifyCertPrivateKeyMatch = true
-		verifyCertExpiration = true
+	if verifyOptions.VerifyTrustChain == false &&
+		verifyOptions.VerifyDNS == false &&
+		verifyOptions.VerifyCertPrivateKeyMatch == false &&
+		verifyOptions.VerifyCertExpiration == false {
+		verifyOptions.VerifyTrustChain = true
+		verifyOptions.VerifyDNS = true
+		verifyOptions.VerifyCertPrivateKeyMatch = true
+		verifyOptions.VerifyCertExpiration = true
 	}
 
 	return &Verify{
-		certRepo:                  certRepo,
-		systemDomain:              systemDoman,
-		appsDomain:                appDomain,
-		verifyTrustChain:          verifyTrustChain,
-		verifyDNS:                 verifyDNS,
-		verifyCertExpiration:      verifyCertExpiration,
-		verifyCertPrivateKeyMatch: verifyCertPrivateKeyMatch,
-		x509VerifyLib:             verifyLib,
-		containsFilter:            containsFilter,
-		CertExpiryWarningMonths:   certExpiryLength,
+		certRepo:      certRepo,
+		options:       verifyOptions,
+		x509VerifyLib: verifyLib,
 	}
 }
 
@@ -103,15 +67,15 @@ func (cmd *Verify) Execute() result.Result {
 	}
 	for idx, cert := range allCerts {
 
-		if len(cmd.containsFilter) > 0 {
-			if !strings.Contains(strings.ToLower(cert.Certificate.Subject.CommonName), strings.ToLower(cmd.containsFilter)) &&
-				!strings.Contains(strings.ToLower(strings.Join(cert.Certificate.DNSNames, " ")), strings.ToLower(cmd.containsFilter)) {
+		if len(cmd.options.ContainsFilter) > 0 {
+			if !strings.Contains(strings.ToLower(cert.Certificate.Subject.CommonName), strings.ToLower(cmd.options.ContainsFilter)) &&
+				!strings.Contains(strings.ToLower(strings.Join(cert.Certificate.DNSNames, " ")), strings.ToLower(cmd.options.ContainsFilter)) {
 				continue
 			}
 		}
 
 		// Only do this verification on Server Certificates
-		if cmd.verifyTrustChain && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
+		if cmd.options.VerifyTrustChain && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
 			// Check if the user provided the root CA certs.
 			if len(cmd.certRepo.RootCACerts) == 0 {
 				cmdResult := cmd.stepCheckCertificateTrustChain(cert, useSystemRootCerts)
@@ -135,16 +99,16 @@ func (cmd *Verify) Execute() result.Result {
 
 			}
 		}
-		if cmd.verifyDNS && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
+		if cmd.options.VerifyDNS && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
 			results[idx] = append(results[idx], cmd.stepCheckCertificateDomainsForPCF(cert))
 		}
 
 		// We can verify expiration on all certificate types
-		if cmd.verifyCertExpiration {
+		if cmd.options.VerifyCertExpiration {
 			results[idx] = append(results[idx], cmd.stepCheckCertificateExpiry(cert))
 		}
 
-		if cmd.verifyCertPrivateKeyMatch && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
+		if cmd.options.VerifyCertPrivateKeyMatch && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
 			results[idx] = append(results[idx], cmd.stepCheckCertificateWithProvidedPrivateKey(cert, cmd.certRepo.PrivateKeys))
 		}
 	}
@@ -216,10 +180,10 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(inputCert certificate.Certi
 	// We'll add the period at the end of the DNS names to ensure
 	// our string comparison method is strict on the format
 	DNSNames := []string{
-		"*." + cmd.appsDomain + ".",
-		"*." + cmd.systemDomain + ".",
-		"*.uaa." + cmd.systemDomain + ".",
-		"*.login." + cmd.systemDomain + ".",
+		"*." + cmd.options.AppsDomain + ".",
+		"*." + cmd.options.SystemDomain + ".",
+		"*.uaa." + cmd.options.SystemDomain + ".",
+		"*.login." + cmd.options.SystemDomain + ".",
 	}
 
 	var overralResult = true
@@ -270,12 +234,12 @@ func (cmd *Verify) stepCheckCertificateExpiry(inputCert certificate.Certificate)
 	if currentTime.After(inputCert.Certificate.NotBefore) &&
 		currentTime.Before(inputCert.Certificate.NotAfter) {
 		// Check if our server cert will expire within the next CertExpiryWarningMonths months.
-		if currentTime.AddDate(0, cmd.CertExpiryWarningMonths, 0).Before(inputCert.Certificate.NotAfter) {
+		if currentTime.AddDate(0, cmd.options.MinimumMonthsWarningToExpire, 0).Before(inputCert.Certificate.NotAfter) {
 			stepResult.Status = result.StatusSuccess
 			stepResult.StatusMessage = fmt.Sprintf("OK! - This certificate expires in %0.2f days (%0.2f months)\n", inputCert.Certificate.NotAfter.Sub(currentTime).Hours()/24, inputCert.Certificate.NotAfter.Sub(currentTime).Hours()/(24*365/12))
 		} else {
 			stepResult.Status = result.StatusWarning
-			stepResult.StatusMessage = fmt.Sprintf("WARNING - Within the next %d months, this certificate expires in %0.2f days (%0.2f months)\n", cmd.CertExpiryWarningMonths, inputCert.Certificate.NotAfter.Sub(currentTime).Hours()/24, inputCert.Certificate.NotAfter.Sub(currentTime).Hours()/(24*365/12))
+			stepResult.StatusMessage = fmt.Sprintf("WARNING - Within the next %d months, this certificate expires in %0.2f days (%0.2f months)\n", cmd.options.MinimumMonthsWarningToExpire, inputCert.Certificate.NotAfter.Sub(currentTime).Hours()/24, inputCert.Certificate.NotAfter.Sub(currentTime).Hours()/(24*365/12))
 		}
 	} else {
 		stepResult.Status = result.StatusFailed

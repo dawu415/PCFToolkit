@@ -53,13 +53,21 @@ var _ = Describe("Verify Command Test", func() {
 		ymlParser = ymlparser_mock.NewYMLParserDataMock()
 		certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
 
-		systemDomain = "sys"
-		appDomain = "apps"
-		verifyCommand = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, false, false, false, false, "", 6, mockVerifyLib)
+		var options = verify.Options{
+			SystemDomain:                 "sys",
+			AppsDomain:                   "apps",
+			MinimumMonthsWarningToExpire: 6,
+		}
+		verifyCommand = verify.NewVerifyCommandCustomVerifyLib(certRepo, &options, mockVerifyLib)
 	})
 
 	It("should return a verify command object", func() {
-		verifyCmd := verify.NewVerifyCommand(certRepo, "testsys", "testapp", false, false, false, false, "", 6)
+		var options = verify.Options{
+			SystemDomain:                 "testsys",
+			AppsDomain:                   "testapp",
+			MinimumMonthsWarningToExpire: 6,
+		}
+		verifyCmd := verify.NewVerifyCommand(certRepo, &options)
 		Expect(verifyCmd).ShouldNot(BeNil())
 	})
 
@@ -105,7 +113,14 @@ var _ = Describe("Verify Command Test", func() {
 		It("should still run when TrustChain exists", func() {
 
 			certRepo.InstallCertificates("somefile1AAAA.pem")
-			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, "", 6, mockVerifyLib)
+
+			var options = verify.Options{
+				SystemDomain:                 systemDomain,
+				AppsDomain:                   appDomain,
+				MinimumMonthsWarningToExpire: 6,
+				VerifyTrustChain:             true,
+			}
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, &options, mockVerifyLib)
 
 			mockVerifyLib.TrustChainExist = true
 			cmdResult := verifyCmd.Execute()
@@ -130,7 +145,13 @@ var _ = Describe("Verify Command Test", func() {
 		It("should still run when TrustChain does not exist", func() {
 			mockVerifyLib.TrustChainExist = false
 			certRepo.InstallCertificates("somefile1BBBBBB.pem")
-			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, "", 6, mockVerifyLib)
+			var options = verify.Options{
+				SystemDomain:                 systemDomain,
+				AppsDomain:                   appDomain,
+				MinimumMonthsWarningToExpire: 6,
+				VerifyTrustChain:             true,
+			}
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, &options, mockVerifyLib)
 
 			cmdResult := verifyCmd.Execute()
 			verifyResult, ok := cmdResult.Data().([][]verify.ResultData)
@@ -158,7 +179,13 @@ var _ = Describe("Verify Command Test", func() {
 			fileIOMock.FileContent = "ABCD"
 			fileIOMock.OpenAndReadFailed = false
 
-			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, systemDomain, appDomain, true, false, false, false, "", 6, mockVerifyLib)
+			var options = verify.Options{
+				SystemDomain:                 systemDomain,
+				AppsDomain:                   appDomain,
+				MinimumMonthsWarningToExpire: 6,
+				VerifyTrustChain:             true,
+			}
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, &options, mockVerifyLib)
 
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
@@ -340,7 +367,15 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.DNSNames = SANsInCert
 			certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
 			certRepo.InstallCertificates("somefile1.pem")
-			verifyCmd := verify.NewVerifyCommand(certRepo, "sys", "apps", false, true, false, false, "", 6)
+
+			var options = verify.Options{
+				SystemDomain:                 systemDomain,
+				AppsDomain:                   appDomain,
+				MinimumMonthsWarningToExpire: 6,
+				VerifyDNS:                    true,
+			}
+			verifyCmd := verify.NewVerifyCommandCustomVerifyLib(certRepo, &options, mockVerifyLib)
+
 			verifyResult, ok := verifyCmd.Execute().Data().([][]verify.ResultData)
 
 			Expect(ok).To(BeTrue())
@@ -357,7 +392,15 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.DNSNames = []string{"*.apps.wu.com", "*.sys.wu.com", "*.login.sys.wu.com", "*.uaa.sys.wu.com"}
 			certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
 			certRepo.InstallCertificates("somefile1.pem")
-			verifyCmd := verify.NewVerifyCommand(certRepo, "sys", "apps", false, true, false, false, "", 6)
+
+			var options = verify.Options{
+				SystemDomain:                 "sys",
+				AppsDomain:                   "apps",
+				MinimumMonthsWarningToExpire: 6,
+				VerifyDNS:                    true,
+			}
+			verifyCmd := verify.NewVerifyCommandCustomVerifyLib(certRepo, &options, mockVerifyLib)
+
 			verifyResult, ok := verifyCmd.Execute().Data().([][]verify.ResultData)
 
 			Expect(ok).To(BeTrue())
@@ -408,8 +451,13 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
 
-			verifyCmd = verify.NewVerifyCommand(certRepo, "sys", "apps", false, false, true, false, "", 6)
-
+			var options = verify.Options{
+				SystemDomain:                 "sys",
+				AppsDomain:                   "apps",
+				MinimumMonthsWarningToExpire: 6,
+				VerifyCertExpiration:         true,
+			}
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, &options, mockVerifyLib)
 		})
 
 		It("should fail if certificate is expired", func() {
@@ -562,7 +610,13 @@ var _ = Describe("Verify Command Test", func() {
 			certLoader.CertificateType = certificate.TypeServerCertificate
 			certLoader.LoadPEMCertificateFailed = false
 
-			verifyCmd = verify.NewVerifyCommand(certRepo, "sys", "apps", false, false, false, true, "", 6)
+			var options = verify.Options{
+				SystemDomain:                 "sys",
+				AppsDomain:                   "apps",
+				MinimumMonthsWarningToExpire: 6,
+				VerifyCertPrivateKeyMatch:    true,
+			}
+			verifyCmd = verify.NewVerifyCommandCustomVerifyLib(certRepo, &options, mockVerifyLib)
 
 		})
 

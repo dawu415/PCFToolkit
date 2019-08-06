@@ -69,7 +69,7 @@ func main() {
 	var cmd command.Command
 	switch cta.CommandName {
 	case "verify":
-		cmd = command.CreateVerifyCommand(certRepo, cta.VerifyOptions.SystemDomain, cta.VerifyOptions.AppsDomain, cta.VerifyOptions.VerifyTrustChain, cta.VerifyOptions.VerifyDNS, cta.VerifyOptions.VerifyCertExpiration, cta.VerifyOptions.VerifyCertPrivateKeyMatch, cta.VerifyOptions.ContainsFilter, cta.VerifyOptions.MinimumMonthsWarningToExpire)
+		cmd = command.CreateVerifyCommand(certRepo, &cta.VerifyOptions)
 	case "decrypt":
 	case "info":
 		cmd = command.CreateInfoCommand(certRepo, &cta.InfoOptions)
