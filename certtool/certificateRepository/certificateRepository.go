@@ -125,6 +125,9 @@ func (repo *CertificateRepository) InstallPrivateKey(serverCertLabel, privateKey
 	return err
 }
 
+// loadAndSortPEMByteCertificates takes a label for the corresponding set of PEM certificates in a byte array.
+// This byte array consists of raw PEM certficate bytes that are read in and loaded as Certificate objects
+// that are processed and sorted into the classes of ServerCerts, RootCAs and Intermediate certs.
 func (repo *CertificateRepository) loadAndSortPEMByteCertificates(label string, PEMCertBytes *[]byte) error {
 	var err error
 	var certificates []certificate.Certificate
