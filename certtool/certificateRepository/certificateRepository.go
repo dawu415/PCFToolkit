@@ -85,21 +85,9 @@ func (repo *CertificateRepository) InstallCertificatesFromYML(certYMLFilename, y
 
 	if err == nil {
 		var PEMCertBytes []byte
-		var certificates []certificate.Certificate
 		PEMCertBytes, err = repo.ymlParser.ParseContent(YMLBytes, ymlPath)
 		if err == nil {
-			certificates, err = repo.certificateLoader.LoadPEMCertificates(certYMLFilename+"--"+ymlPath, PEMCertBytes)
-			if err == nil {
-				for _, cert := range certificates {
-					if cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate {
-						repo.ServerCerts = append(repo.ServerCerts, cert)
-					} else if cert.Type == certificate.TypeRootCACertificate {
-						repo.RootCACerts = append(repo.RootCACerts, cert)
-					} else {
-						repo.IntermediateCerts = append(repo.IntermediateCerts, cert)
-					}
-				}
-			}
+			err = repo.loadAndSortPEMByteCertificates(certYMLFilename+"--"+ymlPath, &PEMCertBytes)
 		}
 	}
 	return err
@@ -111,20 +99,7 @@ func (repo *CertificateRepository) InstallCertificates(certFilename string) erro
 	var PEMCertBytes []byte
 	PEMCertBytes, err = repo.fileIO.OpenAndReadAll(certFilename)
 	if err == nil {
-		var certificates []certificate.Certificate
-		certificates, err = repo.certificateLoader.LoadPEMCertificates(certFilename, PEMCertBytes)
-		if err == nil {
-			for _, cert := range certificates {
-				if cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate {
-					repo.ServerCerts = append(repo.ServerCerts, cert)
-				} else if cert.Type == certificate.TypeRootCACertificate {
-					repo.RootCACerts = append(repo.RootCACerts, cert)
-				} else {
-					repo.IntermediateCerts = append(repo.IntermediateCerts, cert)
-				}
-			}
-		}
-
+		err = repo.loadAndSortPEMByteCertificates(certFilename, &PEMCertBytes)
 	}
 	return err
 }
@@ -147,5 +122,24 @@ func (repo *CertificateRepository) InstallPrivateKey(serverCertLabel, privateKey
 		}
 
 	}
+	return err
+}
+
+func (repo *CertificateRepository) loadAndSortPEMByteCertificates(label string, PEMCertBytes *[]byte) error {
+	var err error
+	var certificates []certificate.Certificate
+	certificates, err = repo.certificateLoader.LoadPEMCertificates(label, *PEMCertBytes)
+	if err == nil {
+		for _, cert := range certificates {
+			if cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate {
+				repo.ServerCerts = append(repo.ServerCerts, cert)
+			} else if cert.Type == certificate.TypeRootCACertificate {
+				repo.RootCACerts = append(repo.RootCACerts, cert)
+			} else {
+				repo.IntermediateCerts = append(repo.IntermediateCerts, cert)
+			}
+		}
+	}
+
 	return err
 }
