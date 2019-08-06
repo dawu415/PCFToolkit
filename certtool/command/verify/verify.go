@@ -67,6 +67,7 @@ func (cmd *Verify) Execute() result.Result {
 	}
 	for idx, cert := range allCerts {
 
+		// If a contains filter exists, Oly process certs whose subject or individual SANs contains the text in specified in ContainsFilter string.
 		if len(cmd.options.ContainsFilter) > 0 {
 			if !strings.Contains(strings.ToLower(cert.Certificate.Subject.CommonName), strings.ToLower(cmd.options.ContainsFilter)) &&
 				!strings.Contains(strings.ToLower(strings.Join(cert.Certificate.DNSNames, " ")), strings.ToLower(cmd.options.ContainsFilter)) {
@@ -74,7 +75,7 @@ func (cmd *Verify) Execute() result.Result {
 			}
 		}
 
-		// Only do this verification on Server Certificates
+		// Only do trust chain verification on Server Certificates
 		if cmd.options.VerifyTrustChain && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
 			// Check if the user provided the root CA certs.
 			if len(cmd.certRepo.RootCACerts) == 0 {
@@ -99,6 +100,7 @@ func (cmd *Verify) Execute() result.Result {
 
 			}
 		}
+		// Verify that the SANS match the particular PCF required domains.
 		if cmd.options.VerifyDNS && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
 			results[idx] = append(results[idx], cmd.stepCheckCertificateDomainsForPCF(cert))
 		}
@@ -108,6 +110,7 @@ func (cmd *Verify) Execute() result.Result {
 			results[idx] = append(results[idx], cmd.stepCheckCertificateExpiry(cert))
 		}
 
+		// If a private key is associated with a server certificate, check to ensure that the private key correspond to the certificate
 		if cmd.options.VerifyCertPrivateKeyMatch && (cert.Type == certificate.TypeServerCertificate || cert.Type == certificate.TypeSelfSignedServerCertificate) {
 			results[idx] = append(results[idx], cmd.stepCheckCertificateWithProvidedPrivateKey(cert, cmd.certRepo.PrivateKeys))
 		}
