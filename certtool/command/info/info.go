@@ -47,6 +47,7 @@ func (cmd *Info) Name() string {
 func (cmd *Info) Execute() result.Result {
 	var trustChainMap = map[certificate.Certificate]CertificateTrustChains{}
 
+	// Build trust chain from server certificates
 	for _, serverCert := range cmd.certRepo.ServerCerts {
 
 		if cmd.skipCert(serverCert) {
@@ -60,6 +61,7 @@ func (cmd *Info) Execute() result.Result {
 			Error:  err,
 		}
 	}
+	// Build trust chain from intermediate certificates
 	for _, intCert := range cmd.certRepo.IntermediateCerts {
 
 		if cmd.skipCert(intCert) {
