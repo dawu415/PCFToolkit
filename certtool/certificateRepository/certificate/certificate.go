@@ -3,7 +3,6 @@ package certificate
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -58,18 +57,30 @@ func (cert *Certificate) LoadPEMCertificates(label string, PEMCertBytes []byte) 
 	var err error
 	var certCount = 0
 	var startByteIdx = 0
+	var junkByteCount = 0
 	remainder := PEMCertBytes
 	for len(remainder) > 0 {
 		var singlePEMCert *pem.Block
 		singlePEMCert, remainder = cert.pemDecoder.Decode(remainder)
-		decodedSinglePEMCertLen := len(PEMCertBytes) - len(remainder)
-		originalCertBytes := PEMCertBytes[startByteIdx:decodedSinglePEMCertLen]
+
+		// If for some reason we weren't abe to decode this block of data, let's just
+		// remove a character until we reach something that is decodable or
+		// exhaust all characters in remainder and allow this loop to break.
+		// This handles the situation where there is an extra newline or carriage return
+		// or, when there shouldn't, there is extra data in the file in between certificates
+		// for some reason.
+		// We should also increment the position of the pointer in PEMCertBytes at where
+		// we are located in the array
+		if singlePEMCert == nil {
+			remainder = remainder[1:]
+			junkByteCount++
+			continue
+		}
+
+		decodedSinglePEMCertLen := len(PEMCertBytes) - junkByteCount - len(remainder)
+		originalCertBytes := PEMCertBytes[startByteIdx+junkByteCount : decodedSinglePEMCertLen]
 		startByteIdx = decodedSinglePEMCertLen
 		certCount++
-		if singlePEMCert == nil {
-			err = fmt.Errorf("Error: Cert PEM %d cannot be parsed", certCount)
-			break
-		}
 
 		if err == nil {
 			var x509Certs []*x509.Certificate
