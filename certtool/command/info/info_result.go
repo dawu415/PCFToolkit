@@ -47,6 +47,10 @@ func (result *Result) Out() {
 
 	for _, cert := range result.certificates {
 
+		var IssuerCommonName = cert.Certificate.Issuer.CommonName
+		if len(cert.Certificate.Issuer.CommonName) <= 0 {
+			IssuerCommonName = cert.Certificate.Issuer.String()
+		}
 		fmt.Print("\n")
 		fmt.Println("---------------------------------------------------------------------")
 		fmt.Printf("Details of %s\n", cert.Label)
@@ -74,7 +78,7 @@ func (result *Result) Out() {
 					for _, cert := range chain {
 						node = node.AddBranch(filepath.Base(cert.Label))
 						node.AddNode("Subject: " + cert.Certificate.Subject.CommonName)
-						node.AddNode("Issuer: " + cert.Certificate.Issuer.CommonName)
+						node.AddNode("Issuer: " + IssuerCommonName)
 
 						if !cert.IsRootCert() {
 							node.AddNode("\b─┐")

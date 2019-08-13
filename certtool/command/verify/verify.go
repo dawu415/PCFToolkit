@@ -69,7 +69,7 @@ func (cmd *Verify) Execute() result.Result {
 
 		// If a contains filter exists, Oly process certs whose subject or individual SANs contains the text in specified in ContainsFilter string.
 		if len(cmd.options.ContainsFilter) > 0 {
-			if !strings.Contains(strings.ToLower(cert.Certificate.Subject.CommonName), strings.ToLower(cmd.options.ContainsFilter)) &&
+			if !strings.Contains(strings.ToLower(cert.Certificate.Subject.String()), strings.ToLower(cmd.options.ContainsFilter)) &&
 				!strings.Contains(strings.ToLower(strings.Join(cert.Certificate.DNSNames, " ")), strings.ToLower(cmd.options.ContainsFilter)) {
 				continue
 			}
@@ -168,7 +168,7 @@ func (cmd *Verify) stepCheckCertificateTrustChain(inputCert certificate.Certific
 
 	return ResultData{
 		Source:           SourceVerifyTrustChain,
-		Title:            fmt.Sprintf("Verifying Certificate Trust Chain %s - %s", rootCertMessage, inputCert.Certificate.Subject.CommonName),
+		Title:            fmt.Sprintf("Verifying Certificate Trust Chain %s - %s", rootCertMessage, inputCert.Certificate.Subject.String()),
 		StepResults:      []StepResultData{verifyStepResult},
 		OverallSucceeded: verifyStepResult.Status == result.StatusSuccess,
 		Signature:        cmd.generateSignatureString(string(*inputCert.PemBlock)),
@@ -217,7 +217,7 @@ func (cmd *Verify) stepCheckCertificateDomainsForPCF(inputCert certificate.Certi
 	}
 	return ResultData{
 		Source:           SourceVerifyCertSANS,
-		Title:            fmt.Sprintf("Checking PCF SANs on Certificate - %s", inputCert.Certificate.Subject.CommonName),
+		Title:            fmt.Sprintf("Checking PCF SANs on Certificate - %s", inputCert.Certificate.Subject.String()),
 		StepResults:      resultsArray,
 		OverallSucceeded: overralResult,
 		Signature:        cmd.generateSignatureString(string(*inputCert.PemBlock)),
@@ -251,7 +251,7 @@ func (cmd *Verify) stepCheckCertificateExpiry(inputCert certificate.Certificate)
 
 	return ResultData{
 		Source:           SourceVerifyCertExpiry,
-		Title:            fmt.Sprintf("Checking Certificate Expiry - %s", inputCert.Certificate.Subject.CommonName),
+		Title:            fmt.Sprintf("Checking Certificate Expiry - %s", inputCert.Certificate.Subject.String()),
 		StepResults:      []StepResultData{stepResult},
 		OverallSucceeded: stepResult.Status == result.StatusSuccess,
 		Signature:        cmd.generateSignatureString(string(*inputCert.PemBlock)),
@@ -298,7 +298,7 @@ func (cmd *Verify) stepCheckCertificateWithProvidedPrivateKey(inputCert certific
 
 	return ResultData{
 		Source:           SourceVerifyCertPrivateKeyMatch,
-		Title:            fmt.Sprintf("Checking the certificate and private key match - %s", inputCert.Certificate.Subject.CommonName),
+		Title:            fmt.Sprintf("Checking the certificate and private key match - %s", inputCert.Certificate.Subject.String()),
 		StepResults:      []StepResultData{stepResult},
 		OverallSucceeded: stepResult.Status == result.StatusSuccess || stepResult.Status == result.StatusNotChecked,
 		Signature:        cmd.generateSignatureString(string(*inputCert.PemBlock)),

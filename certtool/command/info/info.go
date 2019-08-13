@@ -87,7 +87,7 @@ func (cmd *Info) Execute() result.Result {
 func (cmd *Info) skipCert(cert certificate.Certificate) bool {
 	var skip = false
 	if len(cmd.options.ContainsFilter) > 0 {
-		if !strings.Contains(strings.ToLower(cert.Certificate.Subject.CommonName), strings.ToLower(cmd.options.ContainsFilter)) &&
+		if !strings.Contains(strings.ToLower(cert.Certificate.Subject.String()), strings.ToLower(cmd.options.ContainsFilter)) &&
 			!strings.Contains(strings.ToLower(strings.Join(cert.Certificate.DNSNames, " ")), strings.ToLower(cmd.options.ContainsFilter)) {
 			skip = true
 		}
@@ -118,7 +118,7 @@ func (cmd *Info) buildCertificateTrustChain(inputCert certificate.Certificate) (
 		// Do the initial level of certificate chains.
 		// This may also include self-signed one level chain certs
 		for _, cert := range allCerts {
-			if cert.Certificate.Subject.CommonName == inputCert.Certificate.Issuer.CommonName {
+			if cert.Certificate.Subject.String() == inputCert.Certificate.Issuer.String() {
 				chains[chainCount] = append(chains[chainCount], inputCert)
 				chains[chainCount] = append(chains[chainCount], cert)
 				chainCount++
@@ -146,7 +146,7 @@ func (cmd *Info) buildCertificateTrustChain(inputCert certificate.Certificate) (
 						}
 
 						for _, intCert := range cmd.certRepo.IntermediateCerts {
-							if intCert.Certificate.Subject.CommonName == currentCert.Certificate.Issuer.CommonName {
+							if intCert.Certificate.Subject.String() == currentCert.Certificate.Issuer.String() {
 								chains[idx] = append(chains[idx], intCert)
 								break
 							}
@@ -170,7 +170,7 @@ func (cmd *Info) buildCertificateTrustChain(inputCert certificate.Certificate) (
 						}
 
 						for _, rootCert := range cmd.certRepo.RootCACerts {
-							if rootCert.Certificate.Subject.CommonName == currentCert.Certificate.Issuer.CommonName {
+							if rootCert.Certificate.Subject.String() == currentCert.Certificate.Issuer.String() {
 								chains[idx] = append(chains[idx], rootCert)
 								break
 							}
@@ -189,7 +189,7 @@ func (cmd *Info) buildCertificateTrustChain(inputCert certificate.Certificate) (
 				var lastCert = chains[idx][len(chains[idx])-1]
 				if !lastCert.IsRootCert() {
 					for _, sysCert := range systemCerts {
-						if sysCert.Certificate.Subject.CommonName == lastCert.Certificate.Issuer.CommonName {
+						if sysCert.Certificate.Subject.String() == lastCert.Certificate.Issuer.String() {
 							chains[idx] = append(chains[idx], sysCert)
 							break
 						}
