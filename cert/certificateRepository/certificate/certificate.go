@@ -3,6 +3,7 @@ package certificate
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -98,6 +99,10 @@ func (cert *Certificate) LoadPEMCertificates(label string, PEMCertBytes []byte) 
 			}
 
 		}
+	}
+
+	if err == nil && certCount == 0 {
+		err = fmt.Errorf("No valid PEM certificates were decoded")
 	}
 
 	return certificates, err
