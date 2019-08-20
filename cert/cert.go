@@ -65,7 +65,7 @@ func main() {
 			return
 		}
 	}
-	// Create the appropriate comand and execute it.
+	// Create the appropriate command and execute it.
 	var cmd command.Command
 	switch cta.CommandName {
 	case "verify":
