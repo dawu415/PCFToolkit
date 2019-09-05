@@ -46,6 +46,12 @@ type CertificateYMLFiles struct {
 	YMLPath     string
 }
 
+// CertificateFromHost holds information of the host from where we wish to get the certificate
+type CertificateFromHost struct {
+	Hostname string
+	Port     int
+}
+
 // CertArguments holds the Processed input arguments
 type CertArguments struct {
 	programName           string
@@ -56,6 +62,7 @@ type CertArguments struct {
 	VerifyOptions         Verify.Options
 	InfoOptions           Info.Options
 	CertificateYMLFiles   []CertificateYMLFiles
+	CertificateFromHost   []CertificateFromHost
 	flags                 map[string]*certFlagProperty // Private variable
 	PrintHelp             bool
 }
@@ -69,6 +76,7 @@ func NewCertArguments() *CertArguments {
 		IntermediateCertFiles: []string{},
 		ServerCertFiles:       []CertCertificateFileSet{},
 		CertificateYMLFiles:   []CertificateYMLFiles{},
+		CertificateFromHost:   []CertificateFromHost{},
 
 		VerifyOptions: Verify.Options{
 			SystemDomain:                 "sys.",
@@ -125,6 +133,62 @@ func NewCertArguments() *CertArguments {
 						}
 					} else {
 						*err = fmt.Errorf("%s does not support --server-cert", cta.CommandName)
+					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--host": &certFlagProperty{
+				description:        "Takes in a hostname and port, separated by space. If no port is provided, port 443 is used instead . The format is --host <hostname> [<hostport>]",
+				argumentCount:      1,
+				compatibleCommands: []string{"verify", "info"},
+				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					var DefaultHostPort = 443
+
+					if cta.IsCurrentCommandSupported(compatibleCmds) {
+						if (index + 1) < len(args) { // This condition covers the case if we don't have any arguments at the end of the arg list
+							// This flag has a variable number of arguments
+							// Count the number of arguments until it reaches a '-'
+							var idx = index
+							for idx = index + 1; idx < len(args); idx++ {
+								if strings.HasPrefix(args[idx], "-") {
+									break
+								}
+							}
+
+							// Calculate the number of arguments
+							argCount = idx - index - 1
+							// Update the argument count
+							cta.flags["--host"].argumentCount = argCount
+
+							host := CertificateFromHost{}
+
+							if argCount > 0 {
+								if argCount >= 1 {
+									host.Hostname = args[index+1]
+								}
+
+								if argCount >= 2 {
+									port, convertError := strconv.Atoi(args[index+2])
+
+									if convertError == nil {
+										host.Port = port
+									} else {
+										*err = fmt.Errorf("Port number value is invalid with conversion error message %s. The input port value is %s", convertError.Error(), args[index+2])
+									}
+								} else {
+									host.Port = DefaultHostPort
+								}
+
+								cta.CertificateFromHost = append(cta.CertificateFromHost, host)
+							} else {
+								*err = fmt.Errorf("No arguments provided for --host. Got %s instead", args[index+1])
+							}
+						} else {
+							*err = fmt.Errorf("No arguments provided for --host")
+						}
+					} else {
+						*err = fmt.Errorf("%s does not support --host", cta.CommandName)
 					}
 				},
 			},

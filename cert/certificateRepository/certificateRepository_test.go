@@ -5,6 +5,7 @@ import (
 	"github.com/dawu415/PCFToolkit/cert/certificateRepository/certificate"
 	certificate_mock "github.com/dawu415/PCFToolkit/cert/certificateRepository/certificate/mocks"
 	fileIO_mock "github.com/dawu415/PCFToolkit/cert/certificateRepository/fileIO/mocks"
+	hostdialer_mock "github.com/dawu415/PCFToolkit/cert/certificateRepository/hostdialer/mocks"
 	privatekey_mock "github.com/dawu415/PCFToolkit/cert/certificateRepository/privatekey/mocks"
 	ymlParser_mock "github.com/dawu415/PCFToolkit/cert/certificateRepository/ymlparser/mocks"
 	. "github.com/onsi/ginkgo"
@@ -17,6 +18,7 @@ var _ = Describe("Certificate Repository tests", func() {
 	var certLoader *certificate_mock.CertificateMock
 	var keyLoader *privatekey_mock.PrivateKeyMock
 	var ymlParser *ymlParser_mock.YMLParserDataMock
+	var hostDialer *hostdialer_mock.HostDialerDataMock
 
 	BeforeEach(func() {
 
@@ -24,7 +26,37 @@ var _ = Describe("Certificate Repository tests", func() {
 		certLoader = certificate_mock.NewPEMCertificateMock()
 		keyLoader = privatekey_mock.NewPrivateKeyMock()
 		ymlParser = ymlParser_mock.NewYMLParserDataMock()
-		cert = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
+		hostDialer = hostdialer_mock.NewHostDialerMock()
+		cert = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader, hostDialer)
+	})
+
+	It("should be able to successfully install a certificate from valid host", func() {
+
+		certLoader.CertificateType = certificate.TypeServerCertificate
+		certLoader.LoadPEMCertificateFailed = false
+		hostDialer.HostIsInvalid = false
+
+		err := cert.InstallCertificatesFromHost("www.david.com", 443)
+
+		Expect(err).To(BeNil())
+		Expect(len(cert.ServerCerts)).To(Equal(1))
+		Expect(cert.ServerCerts[0].Type).To(Equal(certificate.TypeServerCertificate))
+		Expect(cert.ServerCerts[0].Label).To(Equal("www.david.com:443"))
+		Expect(cert.ServerCerts[0].Certificate.Raw).To(Equal([]byte("abcd")))
+		Expect(len(cert.RootCACerts)).To(Equal(0))
+		Expect(len(cert.IntermediateCerts)).To(Equal(0))
+	})
+
+	It("should fail to install a certificate from an invalid host", func() {
+
+		certLoader.CertificateType = certificate.TypeServerCertificate
+		certLoader.LoadPEMCertificateFailed = false
+		hostDialer.HostIsInvalid = true
+
+		err := cert.InstallCertificatesFromHost("www.david.com", 443)
+
+		Expect(err).ToNot(BeNil())
+		Expect(len(cert.ServerCerts)).To(Equal(0))
 	})
 
 	It("should be able to successfully install a certificate from a YML file", func() {
@@ -45,7 +77,6 @@ var _ = Describe("Certificate Repository tests", func() {
 		Expect(cert.ServerCerts[0].Certificate.Raw).To(Equal([]byte("ABCD/some/path")))
 		Expect(len(cert.RootCACerts)).To(Equal(0))
 		Expect(len(cert.IntermediateCerts)).To(Equal(0))
-
 	})
 
 	It("should be able to successfully handle a failure to install a certificate from a YML file", func() {

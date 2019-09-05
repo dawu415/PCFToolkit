@@ -1,8 +1,11 @@
 package certificateRepository
 
 import (
+	"fmt"
+
 	"github.com/dawu415/PCFToolkit/cert/certificateRepository/certificate"
 	"github.com/dawu415/PCFToolkit/cert/certificateRepository/fileIO"
+	"github.com/dawu415/PCFToolkit/cert/certificateRepository/hostdialer"
 	"github.com/dawu415/PCFToolkit/cert/certificateRepository/privatekey"
 	"github.com/dawu415/PCFToolkit/cert/certificateRepository/ymlparser"
 )
@@ -16,6 +19,7 @@ type CertificateRepository struct {
 	PrivateKeys       map[string]privatekey.PrivateKey
 	fileIO            fileIO.FileIOInterface
 	ymlParser         ymlparser.YMLParser
+	hostDialer        hostdialer.HostDialer
 	certificateLoader certificate.PEMCertificateLoaderInterface
 	privateKeyLoader  privatekey.PEMPrivateKeyLoaderInterface
 }
@@ -25,7 +29,8 @@ func NewCustomCertificateRepository(
 	fio fileIO.FileIOInterface,
 	certLoader certificate.PEMCertificateLoaderInterface,
 	ymlParser ymlparser.YMLParser,
-	keyLoader privatekey.PEMPrivateKeyLoaderInterface) *CertificateRepository {
+	keyLoader privatekey.PEMPrivateKeyLoaderInterface,
+	hostDialer hostdialer.HostDialer) *CertificateRepository {
 
 	return &CertificateRepository{
 		RootCACerts:       []certificate.Certificate{},
@@ -34,6 +39,7 @@ func NewCustomCertificateRepository(
 		PrivateKeys:       map[string]privatekey.PrivateKey{},
 		fileIO:            fio,
 		ymlParser:         ymlParser,
+		hostDialer:        hostDialer,
 		certificateLoader: certLoader,
 		privateKeyLoader:  keyLoader,
 	}
@@ -48,6 +54,7 @@ func NewCertificateRepository() *CertificateRepository {
 		PrivateKeys:       map[string]privatekey.PrivateKey{},
 		fileIO:            fileIO.NewFileIO(),
 		ymlParser:         ymlparser.NewYMLParser(),
+		hostDialer:        hostdialer.NewHostDialer(),
 		certificateLoader: certificate.NewPEMCertificate(),
 		privateKeyLoader:  privatekey.NewPrivateKey(),
 	}
@@ -89,6 +96,18 @@ func (repo *CertificateRepository) InstallCertificatesFromYML(certYMLFilename, y
 		if err == nil {
 			err = repo.loadAndSortPEMByteCertificates(certYMLFilename+"--"+ymlPath, &PEMCertBytes)
 		}
+	}
+	return err
+}
+
+// InstallCertificatesFromHost inserts certificates into the current repo. retrieved from a given host
+func (repo *CertificateRepository) InstallCertificatesFromHost(hostname string, port int) error {
+	var err error
+	var PEMCertBytes []byte
+
+	PEMCertBytes, err = repo.hostDialer.GetPEMCertsFrom(hostname, port)
+	if err == nil {
+		err = repo.loadAndSortPEMByteCertificates(fmt.Sprintf("%s:%d", hostname, port), &PEMCertBytes)
 	}
 	return err
 }

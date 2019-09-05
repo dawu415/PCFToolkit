@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	hostdialer_mock "github.com/dawu415/PCFToolkit/cert/certificateRepository/hostdialer/mocks"
+
 	ymlparser_mock "github.com/dawu415/PCFToolkit/cert/certificateRepository/ymlparser/mocks"
 
 	"github.com/dawu415/PCFToolkit/cert/certificateRepository"
@@ -41,6 +43,7 @@ var _ = Describe("Verify Command Test", func() {
 	var certLoader *certificate_mock.CertificateMock
 	var keyLoader *privatekey_mock.PrivateKeyMock
 	var ymlParser *ymlparser_mock.YMLParserDataMock
+	var hostDialer *hostdialer_mock.HostDialerDataMock
 	var systemDomain string
 	var appDomain string
 	BeforeEach(func() {
@@ -51,7 +54,8 @@ var _ = Describe("Verify Command Test", func() {
 		certLoader = certificate_mock.NewPEMCertificateMock()
 		keyLoader = privatekey_mock.NewPrivateKeyMock()
 		ymlParser = ymlparser_mock.NewYMLParserDataMock()
-		certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
+		hostDialer = hostdialer_mock.NewHostDialerMock()
+		certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader, hostDialer)
 
 		var options = verify.Options{
 			SystemDomain:                 "sys",
@@ -365,7 +369,7 @@ var _ = Describe("Verify Command Test", func() {
 
 		It("should run when only the VerifyDNS option is enabled and have an overall result of false because of incomplete SAN data", func() {
 			certLoader.DNSNames = SANsInCert
-			certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
+			certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader, hostDialer)
 			certRepo.InstallCertificates("somefile1.pem")
 
 			var options = verify.Options{
@@ -390,7 +394,7 @@ var _ = Describe("Verify Command Test", func() {
 
 		It("should run when only the VerifyDNS option is enabled and have an overall result of true because of complete SAN data", func() {
 			certLoader.DNSNames = []string{"*.apps.wu.com", "*.sys.wu.com", "*.login.sys.wu.com", "*.uaa.sys.wu.com"}
-			certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
+			certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader, hostDialer)
 			certRepo.InstallCertificates("somefile1.pem")
 
 			var options = verify.Options{

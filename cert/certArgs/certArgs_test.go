@@ -255,6 +255,43 @@ var _ = Describe("certArgs", func() {
 		Expect(len(usageStringWithCommand) == len(usageStringNoCommand)).Should(BeTrue())
 	})
 
+	It("should work with a valid --host for info", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "info", "--host", "a.com", "123"})
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+		Expect(len(cta.CertificateFromHost)).Should(Equal(1))
+		Expect(cta.CertificateFromHost[0].Hostname).Should(Equal("a.com"))
+		Expect(cta.CertificateFromHost[0].Port).Should(Equal(123))
+	})
+
+	It("should work with a valid --host for verify", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--host", "a.com", "123"})
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+		Expect(len(cta.CertificateFromHost)).Should(Equal(1))
+		Expect(cta.CertificateFromHost[0].Hostname).Should(Equal("a.com"))
+		Expect(cta.CertificateFromHost[0].Port).Should(Equal(123))
+	})
+
+	It("should work with a valid --host with the default port set, if none was specified", func() {
+		cta, err := ctaArgs.Process([]string{"certtool", "verify", "--host", "a.com"})
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(cta).ToNot(BeNil())
+		Expect(len(cta.CertificateFromHost)).Should(Equal(1))
+		Expect(cta.CertificateFromHost[0].Hostname).Should(Equal("a.com"))
+		Expect(cta.CertificateFromHost[0].Port).Should(Equal(443))
+	})
+
+	It("should fail with invalid --host have no inputs", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "info", "--host", "--cert"})
+		Expect(err).Should(HaveOccurred())
+	})
+
+	It("should fail with invalid --host where the port is not a number", func() {
+		_, err := ctaArgs.Process([]string{"certtool", "verify", "--host", "a.com", "abc"})
+		Expect(err).Should(HaveOccurred())
+	})
+
 	It("should work with a valid --cert-yml-field for info", func() {
 		cta, err := ctaArgs.Process([]string{"certtool", "info", "--cert-yml-field", "appz.yml", "/path/cert"})
 		Expect(err).ShouldNot(HaveOccurred())

@@ -4,6 +4,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 
+	hostdialer_mock "github.com/dawu415/PCFToolkit/cert/certificateRepository/hostdialer/mocks"
+
 	ymlparser_mock "github.com/dawu415/PCFToolkit/cert/certificateRepository/ymlparser/mocks"
 
 	"github.com/dawu415/PCFToolkit/cert/certificateRepository"
@@ -28,6 +30,7 @@ var _ = Describe("Info Command Test", func() {
 	var certLoader *certificate_mock.CertificateMock
 	var keyLoader *privatekey_mock.PrivateKeyMock
 	var ymlParser *ymlparser_mock.YMLParserDataMock
+	var hostDialer *hostdialer_mock.HostDialerDataMock
 
 	BeforeEach(func() {
 		certRepo = certificateRepository.NewCertificateRepository()
@@ -37,7 +40,8 @@ var _ = Describe("Info Command Test", func() {
 		certLoader = certificate_mock.NewPEMCertificateMock()
 		keyLoader = privatekey_mock.NewPrivateKeyMock()
 		ymlParser = ymlparser_mock.NewYMLParserDataMock()
-		certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader)
+		hostDialer = hostdialer_mock.NewHostDialerMock()
+		certRepo = certificateRepository.NewCustomCertificateRepository(fileIOMock, certLoader, ymlParser, keyLoader, hostDialer)
 
 		infoCommand = info.NewInfoCommandCustomX509Lib(certRepo, &info.Options{}, mockx509Lib)
 	})

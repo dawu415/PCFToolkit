@@ -30,6 +30,14 @@ func main() {
 
 	certRepo := certificateRepository.NewCertificateRepository()
 
+	// Install the certificates from a host
+	for _, hostInfo := range cta.CertificateFromHost {
+		if err := certRepo.InstallCertificatesFromHost(hostInfo.Hostname, hostInfo.Port); err != nil {
+			fmt.Println("ERROR: ", err.Error())
+			return
+		}
+	}
+
 	// Install the certificates from a YML file
 	for _, ymlFileInfo := range cta.CertificateYMLFiles {
 		if err := certRepo.InstallCertificatesFromYML(ymlFileInfo.YMLFilename, ymlFileInfo.YMLPath); err != nil {
