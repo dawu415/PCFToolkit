@@ -121,11 +121,11 @@ Trust Chain:
     ├───┐
     └── www.google.com:443
         ├── Subject: GTS CA 1O1
-        ├── Issuer: GTS CA 1O1
+        ├── Issuer: GlobalSign
         ├───┐
         └── System Trust Store: GlobalSign
             ├── Subject: GlobalSign
-            └── Issuer: GTS CA 1O1
+            └── Issuer: GlobalSign
 
 
 Chained Certificates:
