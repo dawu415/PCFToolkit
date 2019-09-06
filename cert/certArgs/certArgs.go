@@ -79,8 +79,8 @@ func NewCertArguments() *CertArguments {
 		CertificateFromHost:   []CertificateFromHost{},
 
 		VerifyOptions: Verify.Options{
-			SystemDomain:                 "sys.",
-			AppsDomain:                   "apps.",
+			SystemDomain:                 "sys",
+			AppsDomain:                   "apps",
 			MinimumMonthsWarningToExpire: 6,
 		},
 		InfoOptions: Info.Options{},
@@ -307,7 +307,7 @@ func NewCertArguments() *CertArguments {
 			},
 			/////////////////////////////////////////////////
 			"--apps-domain": &certFlagProperty{
-				description:        "Specifies the app domain on PCF, e.g., apps.company.com . This should be the subdomain. Defaults to 'apps.'",
+				description:        "Specifies the app domain on PCF, e.g., apps.company.com . This should be the subdomain. Defaults to 'apps'",
 				argumentCount:      1,
 				compatibleCommands: []string{"verify"},
 				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
@@ -329,7 +329,7 @@ func NewCertArguments() *CertArguments {
 			},
 			/////////////////////////////////////////////////
 			"--sys-domain": &certFlagProperty{
-				description:        "Specifies the sys domain on PCF, e.g., sys.company.com . This should be the subdomain. Defaults to 'sys.'",
+				description:        "Specifies the sys domain on PCF, e.g., sys.company.com . This should be the subdomain. Defaults to 'sys'",
 				argumentCount:      1,
 				compatibleCommands: []string{"verify"},
 				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
