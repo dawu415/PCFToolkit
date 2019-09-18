@@ -61,7 +61,7 @@ func (result *Result) Out() {
 
 		// Top level result Root Certificates actually don't have a trust chain, so we'll have to print it here
 		if cert.IsRootCert() && !result.hidePEMOutput {
-			fmt.Printf("\n\tRoot CA Certificate - "+cert.Certificate.Subject.CommonName+":\n\n%s\n\n", result.dos2unixString(string(*cert.PemBlock)))
+			fmt.Printf("\n\tRoot CA Certificate - "+cert.Certificate.Subject.String()+":\n\n%s\n\n", result.dos2unixString(string(*cert.PemBlock)))
 		}
 
 		var sb = strings.Builder{}
@@ -103,11 +103,11 @@ func (result *Result) Out() {
 						for _, cert = range chain {
 							if cert.Type == certificate.TypeServerCertificate ||
 								cert.Type == certificate.TypeSelfSignedServerCertificate {
-								sb.WriteString("Server Certificate - " + cert.Certificate.Subject.CommonName + ":\n\n")
+								sb.WriteString("Server Certificate - " + cert.Certificate.Subject.String() + ":\n\n")
 							} else if cert.Type == certificate.TypeIntermediateCertificate {
-								sb.WriteString("Intermediate Certificate - " + cert.Certificate.Subject.CommonName + ":\n\n")
+								sb.WriteString("Intermediate Certificate - " + cert.Certificate.Subject.String() + ":\n\n")
 							} else {
-								sb.WriteString("Root CA Certificate - " + cert.Certificate.Subject.CommonName + ":\n\n")
+								sb.WriteString("Root CA Certificate - " + cert.Certificate.Subject.String() + ":\n\n")
 							}
 
 							// This caters for the case if the certificate was actually a system root certificate
