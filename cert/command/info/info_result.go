@@ -78,8 +78,13 @@ func (result *Result) Out() {
 							IssuerCommonName = cert.Certificate.Issuer.String()
 						}
 
+						var SubjectCommonName = cert.Certificate.Subject.CommonName
+						if len(cert.Certificate.Subject.CommonName) <= 0 {
+							SubjectCommonName = cert.Certificate.Subject.String()
+						}
+
 						node = node.AddBranch(filepath.Base(cert.Label))
-						node.AddNode("Subject: " + cert.Certificate.Subject.CommonName)
+						node.AddNode("Subject: " + SubjectCommonName)
 						node.AddNode("Issuer: " + IssuerCommonName)
 
 						if !cert.IsRootCert() {
