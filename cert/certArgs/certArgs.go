@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	GetExpiring "github.com/dawu415/PCFToolkit/cert/command/get_expiring"
 	Info "github.com/dawu415/PCFToolkit/cert/command/info"
 	Verify "github.com/dawu415/PCFToolkit/cert/command/verify"
 	"github.com/olekukonko/tablewriter"
@@ -14,8 +15,9 @@ import (
 
 // COMMANDS is the list of supported commands in this application
 var COMMANDS = map[string]string{
-	"verify": "Performs a set of certificate tests to ensure it is suitable for use on PCF",
-	"info":   "Provides specific information on the certicate inputs",
+	"verify":       "Performs a set of certificate tests to ensure it is suitable for use on PCF",
+	"info":         "Provides specific information on the certicate inputs",
+	"get-expiring": "Determines which certificates are expiring within a set month (default: 6 months)",
 	//"decrypt": "Decrypts a given private key with its corresponding passphrase",
 }
 
@@ -60,6 +62,7 @@ type CertArguments struct {
 	IntermediateCertFiles []string
 	ServerCertFiles       []CertCertificateFileSet
 	VerifyOptions         Verify.Options
+	GetExpiringOptions    GetExpiring.Options
 	InfoOptions           Info.Options
 	CertificateYMLFiles   []CertificateYMLFiles
 	CertificateFromHost   []CertificateFromHost
@@ -78,6 +81,11 @@ func NewCertArguments() *CertArguments {
 		CertificateYMLFiles:   []CertificateYMLFiles{},
 		CertificateFromHost:   []CertificateFromHost{},
 
+		GetExpiringOptions: GetExpiring.Options{
+			MinimumMonthsWarningToExpire: 6,
+			ShowOk:                       false,
+		},
+
 		VerifyOptions: Verify.Options{
 			SystemDomain:                 "sys",
 			AppsDomain:                   "apps",
@@ -90,7 +98,7 @@ func NewCertArguments() *CertArguments {
 			"--server-cert": &certFlagProperty{
 				description:        "Takes in a server certificate filename and optionally, its unencrypted private key filename. Separated by spaces. The format is --server-cert <server.crt> [<server.key>]",
 				argumentCount:      1,
-				compatibleCommands: []string{"verify", "info"},
+				compatibleCommands: []string{"verify", "info", "get-expiring"},
 				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
 					*err = nil
 
@@ -140,7 +148,7 @@ func NewCertArguments() *CertArguments {
 			"--host": &certFlagProperty{
 				description:        "Takes in a hostname and port, separated by space. If no port is provided, port 443 is used instead . The format is --host <hostname> [<hostport>]",
 				argumentCount:      1,
-				compatibleCommands: []string{"verify", "info"},
+				compatibleCommands: []string{"verify", "info", "get-expiring"},
 				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					var DefaultHostPort = 443
@@ -196,7 +204,7 @@ func NewCertArguments() *CertArguments {
 			"--cert": &certFlagProperty{
 				description:        "Takes in a certificate filename containing one or more certificates. The format is --cert <cert.pem>",
 				argumentCount:      1,
-				compatibleCommands: []string{"verify", "info"},
+				compatibleCommands: []string{"verify", "info", "get-expiring"},
 				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
@@ -220,7 +228,7 @@ func NewCertArguments() *CertArguments {
 			"--cert-yml-field": &certFlagProperty{
 				description:        "Takes in a certificate yml filename and path to certificates. The format is --cert-yml-field <file.yml> </path/to/cert>",
 				argumentCount:      2,
-				compatibleCommands: []string{"verify", "info"},
+				compatibleCommands: []string{"verify", "info", "get-expiring"},
 				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
@@ -251,7 +259,7 @@ func NewCertArguments() *CertArguments {
 			"--root-ca": &certFlagProperty{
 				description:        "Takes in a root ca certificate.  If specified, this will be used as the trusted CA for the input certificate. Otherwise, the system trusted certs are used instead. Usage: --root-ca <rootca.pem>",
 				argumentCount:      1,
-				compatibleCommands: []string{"verify", "info"},
+				compatibleCommands: []string{"verify", "info", "get-expiring"},
 				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
@@ -387,7 +395,7 @@ func NewCertArguments() *CertArguments {
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
 						cta.VerifyOptions.VerifyCertExpiration = true
 					} else {
-						*err = fmt.Errorf("%s does not support --verify-trust-expiration", cta.CommandName)
+						*err = fmt.Errorf("%s does not support --verify-cert-expiration", cta.CommandName)
 					}
 				},
 			},
@@ -465,7 +473,7 @@ func NewCertArguments() *CertArguments {
 			"--expire-warning-time": &certFlagProperty{
 				description:        "Specify the minimum number of months to warn that a certificate will expire. defaults: 6 months",
 				argumentCount:      1,
-				compatibleCommands: []string{"verify"},
+				compatibleCommands: []string{"verify", "get-expiring"},
 				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
@@ -475,6 +483,7 @@ func NewCertArguments() *CertArguments {
 								value, *err = strconv.Atoi(args[index+1])
 								if *err == nil {
 									cta.VerifyOptions.MinimumMonthsWarningToExpire = value
+									cta.GetExpiringOptions.MinimumMonthsWarningToExpire = value
 								}
 							} else {
 								*err = fmt.Errorf("No arguments provided for --expire-warning-time. Got %s instead", args[index+1])
@@ -491,7 +500,7 @@ func NewCertArguments() *CertArguments {
 			"--name": &certFlagProperty{
 				description:        "Employs 'contains' string filtering on subject Common Name or SANs of certificate",
 				argumentCount:      1,
-				compatibleCommands: []string{"info", "verify"},
+				compatibleCommands: []string{"info", "verify", "get-expiring"},
 				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
 					*err = nil
 					if cta.IsCurrentCommandSupported(compatibleCmds) {
@@ -511,6 +520,16 @@ func NewCertArguments() *CertArguments {
 					} else {
 						*err = fmt.Errorf("%s does not support --name", cta.CommandName)
 					}
+				},
+			},
+			/////////////////////////////////////////////////
+			"--show-ok": &certFlagProperty{
+				description:        "Display certificates that are not expiring",
+				argumentCount:      0,
+				compatibleCommands: []string{"get-expiring"},
+				handler: func(index int, args []string, argCount int, cta *CertArguments, compatibleCmds []string, err *error) {
+					*err = nil
+					cta.GetExpiringOptions.ShowOk = true
 				},
 			},
 			/////////////////////////////////////////////////

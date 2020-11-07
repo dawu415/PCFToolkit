@@ -78,7 +78,8 @@ func main() {
 	switch cta.CommandName {
 	case "verify":
 		cmd = command.CreateVerifyCommand(certRepo, &cta.VerifyOptions)
-	case "decrypt":
+	case "get-expiring":
+		cmd = command.CreateGetExpiringCommand(certRepo, &cta.GetExpiringOptions)
 	case "info":
 		cmd = command.CreateInfoCommand(certRepo, &cta.InfoOptions)
 	default:

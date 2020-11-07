@@ -2,6 +2,7 @@ package command
 
 import (
 	"github.com/dawu415/PCFToolkit/cert/certificateRepository"
+	"github.com/dawu415/PCFToolkit/cert/command/get_expiring"
 	"github.com/dawu415/PCFToolkit/cert/command/info"
 	"github.com/dawu415/PCFToolkit/cert/command/result"
 	"github.com/dawu415/PCFToolkit/cert/command/verify"
@@ -21,4 +22,9 @@ func CreateVerifyCommand(certRepo *certificateRepository.CertificateRepository, 
 // CreateInfoCommand creates an Info Command
 func CreateInfoCommand(certRepo *certificateRepository.CertificateRepository, infoOptions *info.Options) Command {
 	return info.NewInfoCommand(certRepo, infoOptions)
+}
+
+// CreateGetExpiringCommand creates an Get-Expiring Command
+func CreateGetExpiringCommand(certRepo *certificateRepository.CertificateRepository, getExpiringOptions *get_expiring.Options) Command {
+	return get_expiring.NewGetExpiringCommand(certRepo, getExpiringOptions)
 }
