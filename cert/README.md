@@ -310,7 +310,7 @@ Trust Chain:
 4. Running get-expiring a host and checking expiring certificates within the next 16 months:
 
 ```
-cert dawu$ ./cert get-expiring --host www.google.com 443 --expire-warning-time 16
+./cert get-expiring --host www.google.com 443 --expire-warning-time 16
 
 ---------------------------------------------------------------------
 www.google.com:443  ----  CN=www.google.com,O=Google LLC,L=Mountain View,ST=California,C=US
