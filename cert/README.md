@@ -6,7 +6,7 @@ cert is a helper tool written in Go and is used to assist in understanding and d
 
 ## Features
 ----
-cert currently supports two commands:
+cert currently supports three commands:
 
 - **verify**: Runs a set of verification tests for a certificate for use on PCF. This command will cause the program to return `1` (fail), should any of these tests fail. The tests are:
 
@@ -22,7 +22,9 @@ cert currently supports two commands:
 
 - **info**: Displays general certificate and diagnostic information. For example, construction of the chain of trust of a certificate from all provided certificates and those that exist within the OS's system trust store.
 
-Each command supports reading in PEM encoded certificates from following sources
+- **get-expiring**: Iterates through a set of certificates and determines outputs if they are expiring within the next 6 months (default value). This command will output nothing, if there are no expiring certificates. Use `--expire-warning-time x` to set `x` months look-ahead.  
+
+Each command supports reading in multiple PEM encoded certificates from following sources
 
 - From a file containing a single PEM certificate
 - From a file containing multiple PEM certificates
@@ -303,4 +305,40 @@ Trust Chain:
 ...
 ...
 
+```
+
+4. Running get-expiring a host and checking expiring certificates within the next 16 months:
+
+```
+cert dawu$ ./cert get-expiring --host www.google.com 443 --expire-warning-time 16
+
+---------------------------------------------------------------------
+www.google.com:443  ----  CN=www.google.com,O=Google LLC,L=Mountain View,ST=California,C=US
+---------------------------------------------------------------------
+
+Status: WARNING - Within the next 16 months, this certificate expires in 66.60 days (2.19 months)
+
+
+Certificate Valid From: 2020-10-20 18:08:34 +0000 UTC To 2021-01-12 18:08:34 +0000 UTC
+
+Time Check Period Length: 16 Months
+Time Check Period From: 2020-11-06 21:50:35.048271 -0600 CST m=+0.036010729
+Time Check Period To: 2020-11-06 21:50:35.048271 -0600 CST m=+0.036010729
+
+Cert Signature: MIIExzCCA6...+ntlMQtbuk
+
+---------------------------------------------------------------------
+www.google.com:443  ----  CN=GTS CA 1O1,O=Google Trust Services,C=US
+---------------------------------------------------------------------
+
+Status: WARNING - Within the next 16 months, this certificate expires in 402.84 days (13.24 months)
+
+
+Certificate Valid From: 2017-06-15 00:00:42 +0000 UTC To 2021-12-15 00:00:42 +0000 UTC
+
+Time Check Period Length: 16 Months
+Time Check Period From: 2020-11-06 21:50:35.0487 -0600 CST m=+0.036440073
+Time Check Period To: 2020-11-06 21:50:35.0487 -0600 CST m=+0.036440073
+
+Cert Signature: MIIESjCCAz...atnZz1yg==
 ```
