@@ -2,6 +2,7 @@ package hostdialer
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 )
@@ -29,11 +30,26 @@ func (h *Data) GetPEMCertsFrom(host string, port int) ([]byte, error) {
 
 	// We'll skip the TLS check, because we just want to get the certificate here.
 	// If this is not done, this method may fail
-	conn, err = tls.Dial("tcp", fmt.Sprintf("%s:%d", host, port), &tls.Config{InsecureSkipVerify: true})
+	conn, err = tls.Dial("tcp", fmt.Sprintf("%s:%d", host, port),
+		&tls.Config{
+			InsecureSkipVerify: true,
+			ClientAuth:         tls.RequestClientCert,
+			VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				for _, rawCert := range rawCerts {
+					PEMCertBytes = append(PEMCertBytes,
+						pem.EncodeToMemory(&pem.Block{
+							Type:  "CERTIFICATE",
+							Bytes: rawCert,
+						})...)
+				}
+				return nil
+			},
+		},
+	)
 
 	// If we can dial in without error, iterate through the peer certificates and convert them back into
 	// PEM format to be returned.
-	if err == nil {
+	if len(PEMCertBytes) == 0 && err == nil {
 		for _, cert := range conn.ConnectionState().PeerCertificates {
 			PEMCertBytes = append(PEMCertBytes,
 				pem.EncodeToMemory(&pem.Block{
@@ -42,5 +58,10 @@ func (h *Data) GetPEMCertsFrom(host string, port int) ([]byte, error) {
 				})...)
 		}
 	}
+
+	if len(PEMCertBytes) > 0 && err != nil && err.Error() == "EOF" {
+		err = nil
+	}
+
 	return PEMCertBytes, err
 }
