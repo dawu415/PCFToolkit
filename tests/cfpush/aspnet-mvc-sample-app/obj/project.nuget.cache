@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "aCyyfiKyfiUoiUZ8M8UNNAunYK5NkN4PO1lWKdnxrzhqwCB9YxjoUm1MiNAN8l3oAiokMAU+2d9zJ9rKSfgr0g==",
+  "success": true,
+  "projectFilePath": "/Users/dawu/workspace/pcf_test_applications/aspnet-mvc-sample-app/aspnet-mvc-sample-app.csproj",
+  "expectedPackageFiles": [
+    "/Users/dawu/.nuget/packages/microsoft.netcore.app.runtime.linux-x64/3.1.3/microsoft.netcore.app.runtime.linux-x64.3.1.3.nupkg.sha512",
+    "/Users/dawu/.nuget/packages/microsoft.aspnetcore.app.runtime.linux-x64/3.1.3/microsoft.aspnetcore.app.runtime.linux-x64.3.1.3.nupkg.sha512",
+    "/Users/dawu/.nuget/packages/microsoft.netcore.app.host.linux-x64/3.1.3/microsoft.netcore.app.host.linux-x64.3.1.3.nupkg.sha512"
+  ],
+  "logs": []
+}
